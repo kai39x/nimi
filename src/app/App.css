@@ -1,0 +1,35 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: var(--n-s2);
+  pointer-events: none;
+}
+
+.capsule {
+  pointer-events: auto;
+  width: 148px;
+  height: 52px;
+  border-radius: var(--n-r-capsule);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--n-text);
+}
+
+.capsule__name {
+  font-size: var(--n-fs-label);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.capsule__meta {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--n-muted);
+  direction: ltr;
+}

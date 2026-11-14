@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions granted to the NIMI overlay window.",
+  "windows": ["overlay"],
+  "permissions": ["core:default"]
+}
