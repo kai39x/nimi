@@ -65,6 +65,24 @@ Explorer fires drag-enter / over / drop with paths and positions; (d) the same a
 **Known limits.** An elevated (admin) source cannot drop into a non-elevated window (UIPI) — true for every app.
 Extremely fast cursor flicks across the zone between two 16 ms polls are not realistic at 160 px.
 
+### What phase 1 taught us (keep!)
+
+- **Never set `focus: false` on a window that must accept file drops.** With that flag, WebView2 never
+  registers its own OLE drop targets on its browser-process child windows (`Chrome_WidgetWin_1`,
+  `Chrome_RenderWidgetHostHWND`), and OLE only walks up the window chain within the thread of the
+  window under the cursor, so wry's drop target on the host window is never reached: every drop
+  returns `DROPEFFECT_NONE`, no `drag-enter` ever fires. Found by bisecting the overlay config with
+  a real OLE drag (`scripts/drag-file.ps1`). The overlay instead uses `focusable: false`
+  (`WS_EX_NOACTIVATE`) plus `WM_MOUSEACTIVATE → MA_NOACTIVATE` in `window/subclass.rs`, which keeps
+  drops working and still never steals focus.
+- `alwaysOnTop`, `skipTaskbar`, `focusable: false` and toggling `set_ignore_cursor_events` do **not**
+  interfere with drops (all verified).
+- Secondary windows are declared in `tauri.conf.json` and created hidden at startup; creating a
+  webview window at runtime from a command left its webview stuck on `about:blank` on this machine.
+  Opening = `show()` + `set_focus()`, closing = hide (`on_window_event` in `lib.rs`).
+- Measured on the 4K @ 200 % machine: click-through flips in one poll tick, drag + recenter exact to
+  the pixel, fullscreen auto-hide within 1 s, idle CPU of the whole process tree ≈ 0.2 % of one core.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

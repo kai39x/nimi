@@ -1,0 +1,46 @@
+/* The overlay window is 960×720 logical; only children with pointer-events get the mouse,
+   and only if they also register a hit rect (hitRects.ts). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 320ms var(--n-ease-out);
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* Hidden (fullscreen app / hide for 1 h): fade out instantly, fade back in gently. */
+.overlay--hidden {
+  opacity: 0;
+  transition: none;
+}
+
+.overlay--hidden * {
+  animation-play-state: paused !important;
+}
+
+/* Dev-only drag-and-drop readout */
+.diag {
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 520px;
+  padding: 6px 12px;
+  border-radius: var(--n-r-button);
+  font-size: var(--n-fs-caption);
+  line-height: 1.4;
+  color: var(--n-muted);
+  direction: ltr;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}

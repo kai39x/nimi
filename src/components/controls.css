@@ -1,0 +1,95 @@
+/* Toggle — 44×24, knob 18 */
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--n-fill-hover);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  transition:
+    background var(--n-dur-press) var(--n-ease),
+    box-shadow var(--n-dur-press) var(--n-ease);
+}
+
+.toggle__knob {
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--n-text);
+  transition:
+    transform 160ms var(--n-ease-out),
+    background var(--n-dur-press) var(--n-ease);
+}
+
+.toggle--on {
+  background: var(--n-butter);
+  box-shadow: var(--n-glow-primary);
+}
+
+.toggle--on .toggle__knob {
+  background: var(--n-bg);
+  transform: translateX(20px);
+}
+
+:dir(rtl) .toggle--on .toggle__knob {
+  transform: translateX(-20px);
+}
+
+/* Segmented */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+}
+
+.segmented__option {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: var(--n-fs-label);
+  line-height: 1.4;
+  color: var(--n-muted);
+  transition:
+    background var(--n-dur-press) var(--n-ease),
+    color var(--n-dur-press) var(--n-ease);
+}
+
+.segmented__option:hover {
+  color: var(--n-text);
+}
+
+.segmented__option.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--n-text);
+  font-weight: 600;
+}
+
+/* Icon button (header actions) */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--n-r-button);
+  color: var(--n-muted);
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  transition:
+    background var(--n-dur-press) var(--n-ease),
+    color var(--n-dur-press) var(--n-ease),
+    transform var(--n-dur-press) var(--n-ease);
+}
+
+.icon-btn:hover {
+  background: var(--n-fill-hover);
+  color: var(--n-text);
+}
+
+.icon-btn:active {
+  transform: scale(0.96);
+}

@@ -25,9 +25,23 @@
         "shadow": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "focus": false,
+        "focusable": false,
         "visible": false,
         "dragDropEnabled": true
+      },
+      {
+        "label": "settings",
+        "title": "NIMI",
+        "url": "index.html",
+        "width": 780,
+        "height": 580,
+        "resizable": false,
+        "maximizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "center": true,
+        "visible": false
       }
     ],
     "security": {
@@ -36,7 +50,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "category": "Utility",
     "shortDescription": "NIMI — desktop companion",
     "icon": [
@@ -47,8 +63,12 @@
       "icons/icon.png"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "embedBootstrapper" },
-      "nsis": { "installMode": "currentUser" }
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
     }
   }
 }
