@@ -1,18 +1,24 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import nimiIdle from "@design/character/svg/nimi_idle.svg";
 import { Icon, type IconName } from "@/components/Icon";
-import { Segmented, Toggle } from "@/components/controls";
+import { Segmented, Slider, Toggle } from "@/components/controls";
 import { useT, type TKey } from "@/i18n";
 import { listMonitors } from "@/ipc/commands";
 import type { MonitorInfo } from "@/ipc/generated/MonitorInfo";
 import { updateSettings, useSettings } from "@/lib/settings";
+import { isWinter, nuriPace } from "@/lib/winter";
 import { DropDiagnostics } from "@/features/overlay/DropDiagnostics";
+import { Nimi } from "@/features/character/Nimi";
+import { DEFAULT_NIMI_SIZE } from "@/features/capsule/Capsule";
+import "@/features/capsule/capsule.css";
 import "./settings.css";
+
+type SectionId = "general" | "character";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
-  { id: "character", icon: "star4", label: "settings.section.character", ready: false },
+  { id: "character", icon: "star4", label: "settings.section.character", ready: true },
   { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: false },
   { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: false },
   { id: "feed", icon: "pocket", label: "settings.section.feed", ready: false },
@@ -35,12 +41,13 @@ function Row({ title, sub, children }: { title: string; sub?: string; children: 
 }
 
 /**
- * Settings window (board 16). Phase 1 ships the shell and the «عام» section only; the other
- * sections arrive with their features and the full window in phase 10.
+ * Settings window (board 16). Sections arrive with their features; the full window lands in
+ * phase 10. Changes apply instantly — there is no save button.
  */
 export function SettingsWindow() {
   const settings = useSettings();
   const t = useT();
+  const [section, setSection] = useState<SectionId>("general");
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
 
   useEffect(() => {
@@ -65,6 +72,8 @@ export function SettingsWindow() {
     })),
   ];
 
+  const sectionTitle = section === "general" ? t("settings.section.general") : t("settings.section.character");
+
   return (
     <div className="settings-window">
       <div className="settings n-glass">
@@ -74,16 +83,17 @@ export function SettingsWindow() {
             <span data-tauri-drag-region>{t("settings.title")}</span>
           </div>
           <nav className="settings__nav">
-            {SECTIONS.map((section) => (
+            {SECTIONS.map((s) => (
               <button
-                key={section.id}
+                key={s.id}
                 type="button"
-                className={"nav-item" + (section.id === "general" ? " is-active" : "")}
-                disabled={!section.ready}
-                title={section.ready ? undefined : t("settings.soon")}
+                className={"nav-item" + (s.id === section ? " is-active" : "")}
+                disabled={!s.ready}
+                title={s.ready ? undefined : t("settings.soon")}
+                onClick={() => setSection(s.id as SectionId)}
               >
-                <Icon name={section.icon} size={18} />
-                <span>{t(section.label)}</span>
+                <Icon name={s.icon} size={18} />
+                <span>{t(s.label)}</span>
               </button>
             ))}
           </nav>
@@ -91,45 +101,113 @@ export function SettingsWindow() {
 
         <main className="settings__main">
           <header className="settings__header" data-tauri-drag-region>
-            <h1 data-tauri-drag-region>{t("settings.section.general")}</h1>
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label={t("settings.close")}
-              onClick={() => void getCurrentWindow().close()}
-            >
+            <h1 data-tauri-drag-region>{sectionTitle}</h1>
+            <button type="button" className="icon-btn" aria-label={t("settings.close")} onClick={() => void getCurrentWindow().close()}>
               <Icon name="x" size={18} />
             </button>
           </header>
 
-          <section className="settings__content">
-            <Row title={t("settings.language")}>
-              <Segmented
-                label={t("settings.language")}
-                value={settings.language}
-                options={[
-                  { value: "ar", label: t("settings.language.ar") },
-                  { value: "en", label: t("settings.language.en") },
-                ]}
-                onChange={(language) => void updateSettings({ language })}
-              />
-            </Row>
-            <Row title={t("settings.autostart")} sub={t("settings.autostart.sub")}>
-              <Toggle
-                label={t("settings.autostart")}
-                checked={settings.autostart}
-                onChange={(autostart) => void updateSettings({ autostart })}
-              />
-            </Row>
-            <Row title={t("settings.display")} sub={t("settings.display.sub")}>
-              <Segmented
-                label={t("settings.display")}
-                value={displayOptions.some((o) => o.value === settings.display) ? settings.display : "primary"}
-                options={displayOptions}
-                onChange={(display) => void updateSettings({ display })}
-              />
-            </Row>
-          </section>
+          {section === "general" && (
+            <section className="settings__content">
+              <Row title={t("settings.language")}>
+                <Segmented
+                  label={t("settings.language")}
+                  value={settings.language}
+                  options={[
+                    { value: "ar", label: t("settings.language.ar") },
+                    { value: "en", label: t("settings.language.en") },
+                  ]}
+                  onChange={(language) => void updateSettings({ language })}
+                />
+              </Row>
+              <Row title={t("settings.autostart")} sub={t("settings.autostart.sub")}>
+                <Toggle label={t("settings.autostart")} checked={settings.autostart} onChange={(autostart) => void updateSettings({ autostart })} />
+              </Row>
+              <Row title={t("settings.display")} sub={t("settings.display.sub")}>
+                <Segmented
+                  label={t("settings.display")}
+                  value={displayOptions.some((o) => o.value === settings.display) ? settings.display : "primary"}
+                  options={displayOptions}
+                  onChange={(display) => void updateSettings({ display })}
+                />
+              </Row>
+              <Row title={t("settings.winter")} sub={t("settings.winter.sub")}>
+                <Segmented
+                  label={t("settings.winter")}
+                  value={settings.winter}
+                  options={[
+                    { value: "auto", label: t("settings.winter.auto") },
+                    { value: "always", label: t("settings.winter.always") },
+                    { value: "off", label: t("settings.winter.off") },
+                  ]}
+                  onChange={(winter) => void updateSettings({ winter })}
+                />
+              </Row>
+              <Row title={t("settings.snow")} sub={t("settings.snow.sub")}>
+                <Toggle label={t("settings.snow")} checked={settings.snow} onChange={(snow) => void updateSettings({ snow })} />
+              </Row>
+            </section>
+          )}
+
+          {section === "character" && (
+            <section className="settings__content">
+              <div className="preview">
+                <div
+                  className="capsule n-glass preview__capsule"
+                  style={{ "--nimi-scale": settings.nimiSize / DEFAULT_NIMI_SIZE } as CSSProperties}
+                >
+                  <Nimi
+                    className="capsule__nimi"
+                    mood="idle"
+                    size={settings.nimiSize}
+                    winter={isWinter(settings)}
+                    reducedMotion={settings.reduceMotion}
+                    nuriPace={nuriPace(settings.nuriActivity)}
+                  />
+                </div>
+                <div className="preview__caption">{t("settings.preview")}</div>
+              </div>
+              <Row title={t("settings.size")} sub={t("settings.size.sub")}>
+                <Slider
+                  label={t("settings.size")}
+                  min={48}
+                  max={96}
+                  step={2}
+                  value={settings.nimiSize}
+                  format={(v) => `${v}px`}
+                  onChange={(nimiSize) => void updateSettings({ nimiSize })}
+                />
+              </Row>
+              <Row title={t("settings.sleepAfter")} sub={t("settings.sleepAfter.sub")}>
+                <Segmented
+                  label={t("settings.sleepAfter")}
+                  value={String(settings.sleepAfterMin)}
+                  options={[
+                    { value: "10", label: t("settings.minutes.10") },
+                    { value: "20", label: t("settings.minutes.20") },
+                    { value: "30", label: t("settings.minutes.30") },
+                    { value: "0", label: t("settings.never") },
+                  ]}
+                  onChange={(v) => void updateSettings({ sleepAfterMin: Number(v) })}
+                />
+              </Row>
+              <Row title={t("settings.nuri")} sub={t("settings.nuri.sub")}>
+                <Segmented
+                  label={t("settings.nuri")}
+                  value={settings.nuriActivity}
+                  options={[
+                    { value: "calm", label: t("settings.nuri.calm") },
+                    { value: "normal", label: t("settings.nuri.normal") },
+                    { value: "active", label: t("settings.nuri.active") },
+                  ]}
+                  onChange={(nuriActivity) => void updateSettings({ nuriActivity })}
+                />
+              </Row>
+              <Row title={t("settings.reduceMotion")} sub={t("settings.reduceMotion.sub")}>
+                <Toggle label={t("settings.reduceMotion")} checked={settings.reduceMotion} onChange={(reduceMotion) => void updateSettings({ reduceMotion })} />
+              </Row>
+            </section>
+          )}
         </main>
       </div>
       {import.meta.env.DEV && <DropDiagnostics />}

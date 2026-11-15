@@ -1,0 +1,289 @@
+/*
+ * Layout and additions on top of the approved rig CSS (design/character/nimi.css).
+ *
+ * The rig is a 208 px "unit stage" scaled to the frame, so every keyframe from the reference
+ * (which is written in rig units / px) applies unchanged to the HTML layer wrappers. Wrappers
+ * carry the `L-*` classes the reference animates; transform origins are restated in unit px
+ * because `transform-box: fill-box` means nothing outside SVG.
+ */
+
+.nimi {
+  position: relative;
+  display: block;
+  flex: none;
+}
+
+.nimi-stage,
+.nimi-units,
+.nimi .shadow,
+.nimi .lift,
+.nimi .orbit-layer,
+.nimi .orbit-tilt,
+.nimi .squash,
+.nimi .switch,
+.nimi .face,
+.nimi .L-glance {
+  position: absolute;
+  inset: 0;
+}
+
+.nimi-stage {
+  /* whole-character swings (grabbed / dizzy) — the reference animates the <svg> root */
+  transform-origin: 50% 88%;
+}
+
+.nimi.m-grabbed .nimi-stage {
+  animation: grabbed-svg 1.8s infinite;
+  transform-origin: 50% 22%;
+}
+
+.nimi.m-dizzy .nimi-stage {
+  animation: dizzy-svg 1.3s infinite;
+}
+
+.nimi-units {
+  width: 208px;
+  height: 208px;
+  transform-origin: 0 0;
+}
+
+.nimi-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 208px;
+  height: 208px;
+  overflow: visible;
+  display: block;
+}
+
+/* Compositor layers for the big wrappers. Never put will-change on a zero-size box: a 0×0
+   compositor layer clips its own children. Animated transforms get promoted automatically. */
+.nimi .shadow,
+.nimi .lift,
+.nimi .orbit-layer,
+.nimi .squash,
+.nimi .face {
+  will-change: transform;
+}
+
+/* Transform origins in unit px (viewBox origin is -4, 24 → unit (x, y) = left x+4, top y-24) */
+.nimi .L-sh {
+  transform-origin: 104px 202px; /* shadow center (100, 226) */
+}
+
+.nimi .L-sq,
+.nimi .L-switch {
+  transform-origin: 104px 186.5px; /* feet bottom (100, 210.5) */
+}
+
+.nimi.m-grabbed .L-sq {
+  transform-origin: 104px 48px; /* body top (100, 72) */
+}
+
+.nimi .L-face,
+.nimi .L-glance {
+  transform-origin: 104px 118px; /* face center (100, 142) */
+}
+
+.nimi .L-lift,
+.nimi .L-orb {
+  transform-origin: 104px 122px;
+}
+
+/* Orbit: a frame rotated by the ring tilt around the orbit center, Nuri translated inside it */
+.nimi .orbit-tilt {
+  transform: rotate(-14deg);
+  transform-origin: 104px 122px; /* (CX, CY) = (100, 146) */
+}
+
+.nimi .orbit-frame {
+  position: absolute;
+  left: 104px;
+  top: 122px;
+  width: 0;
+  height: 0;
+  transition: opacity 300ms var(--n-ease, ease);
+}
+
+.nimi .orbit-frame.is-parked {
+  opacity: 0;
+}
+
+.nimi .orb,
+.nimi .orbF {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.nimi .orb {
+  animation: nimiOrbit 9s linear infinite;
+}
+
+.nimi .orbF {
+  animation: nimiFront 9s linear infinite;
+}
+
+.nimi .orb__upright {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform: rotate(14deg);
+}
+
+.nimi .moon,
+.nimi .glow,
+.nimi .sat,
+.nimi .ring-pulse,
+.nimi .parked .L-moon {
+  position: absolute;
+  transform-origin: 50% 50%;
+}
+
+.nimi .moon svg,
+.nimi .glow svg,
+.nimi .sat svg,
+.nimi .ring-pulse svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Boxes centered on their anchor point, sized in rig units */
+.nimi .moon,
+.nimi .ring-pulse,
+.nimi .parked .L-moon {
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+}
+
+.nimi .parked .L-moon .moon {
+  left: 0;
+  top: 0;
+}
+
+.nimi .glow {
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+}
+
+.nimi .parked .glow {
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+}
+
+.nimi .sat {
+  left: -13.5px;
+  top: -13.5px;
+  width: 27px;
+  height: 27px; /* 20 units × 1.35 */
+}
+
+.nimi .parked {
+  position: absolute;
+  width: 0;
+  height: 0;
+  animation: nFadeIn 300ms ease-out 1;
+}
+
+@keyframes nFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The ring sparkle (stroke-dashoffset) is driven from JS at ~15 fps — see Nimi.tsx. */
+.nimi .dashB,
+.nimi .dashF {
+  animation: none !important;
+}
+
+/* Blinks are driven by JS at random 4–7 s intervals instead of the reference's fixed loop. */
+.nimi .L-blink {
+  animation: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nimi .L-blink.is-blinking {
+  animation: nBlinkOnce 0.22s ease-in-out 1;
+}
+
+@keyframes nBlinkOnce {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.06);
+  }
+}
+
+/* Small random glances layered on the mood's own look-around. */
+.nimi .L-glance {
+  transition: transform 600ms var(--n-ease, cubic-bezier(0.45, 0, 0.55, 1));
+}
+
+/* Mood transition: 250–400 ms with a slight squash (spec §2). */
+.nimi.is-switching .L-switch {
+  animation: nSwitch 300ms cubic-bezier(0.34, 1.3, 0.64, 1) 1;
+}
+
+@keyframes nSwitch {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.05, 0.94);
+  }
+  70% {
+    transform: scale(0.98, 1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Reduce motion: no hops, squash, stretch, swings or spins; blinks, fades and the slow orbit stay. */
+.nimi.nimi--still .nimi-stage,
+.nimi.nimi--still .L-lift,
+.nimi.nimi--still .L-sq,
+.nimi.nimi--still .L-sh,
+.nimi.nimi--still .L-fl,
+.nimi.nimi--still .L-fr,
+.nimi.nimi--still .L-face,
+.nimi.nimi--still .L-orb,
+.nimi.nimi--still .L-moon,
+.nimi.nimi--still .L-x1,
+.nimi.nimi--still .L-x2,
+.nimi.nimi--still .L-roll,
+.nimi.nimi--still .L-pom,
+.nimi.nimi--still .L-scarf,
+.nimi.nimi--still .L-switch,
+.nimi.nimi--still .spin,
+.nimi.nimi--still .pring {
+  animation: none !important;
+}
+
+.nimi.nimi--still .L-glance {
+  transition: none;
+}

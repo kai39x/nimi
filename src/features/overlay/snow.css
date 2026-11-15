@@ -1,0 +1,30 @@
+.snow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+  pointer-events: none;
+  mask: linear-gradient(#000 0, #000 70%, transparent 100%);
+}
+
+.snow__flake {
+  position: absolute;
+  top: -6px;
+  border-radius: 50%;
+  background: var(--n-snow);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
+  animation: snowFall linear infinite;
+}
+
+@keyframes snowFall {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--drift), 55%);
+  }
+  100% {
+    transform: translate(0, 110%) translateY(100cqh);
+  }
+}

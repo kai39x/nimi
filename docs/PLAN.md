@@ -83,6 +83,23 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 - Measured on the 4K @ 200 % machine: click-through flips in one poll tick, drag + recenter exact to
   the pixel, fullscreen auto-hide within 1 s, idle CPU of the whole process tree ≈ 0.2 % of one core.
 
+### What phase 2 taught us (the character)
+
+- **SVG-internal animations are too expensive here.** The display runs at ~141 Hz and every CSS
+  transform on an SVG `<g>` re-runs style, layout, paint and GPU raster for the whole character each
+  frame: the straight port of the rig cost ~60 % of one core while idle. The port keeps the exact
+  geometry and the approved keyframes, but every layer that moves each frame (shadow, lift, squash,
+  orbit, Nuri, glow, face) is an HTML wrapper inside a 208 px "unit stage" scaled to the frame, so
+  the reference keyframes (written in rig px) apply unchanged and run on the compositor. Result:
+  ~5–7 % of one core (≈0.5 % of the machine) with the full idle motion, measured with
+  `scripts/cdp_trace.py` and the process-tree CPU script.
+- The ring sparkle (`stroke-dashoffset`) cannot be composited; it is driven from a 15 fps timer
+  instead of a CSS animation so the main thread sleeps between updates.
+- **Never put `will-change` on a 0×0 box**: a zero-size compositor layer clips its own children
+  (Nuri vanished until the moon wrappers got real centered boxes).
+- Nuri never jumps: the orbit nodes stay mounted across moods and the animation's current time is
+  rescaled to the new period on mood change (`Nimi.tsx`, `useLayoutEffect`).
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

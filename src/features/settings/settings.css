@@ -127,3 +127,25 @@
   top: auto;
   bottom: 34px;
 }
+
+/* Live preview card for the character section (board 16) */
+.preview {
+  display: grid;
+  place-items: center;
+  gap: var(--n-s3);
+  margin: var(--n-s2) 0 var(--n-s3);
+  padding: 44px var(--n-s4) var(--n-s4);
+  border-radius: var(--n-r-card);
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  min-height: 190px;
+}
+
+.preview__capsule {
+  pointer-events: none;
+}
+
+.preview__caption {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}

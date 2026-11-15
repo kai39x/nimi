@@ -93,3 +93,43 @@
 .icon-btn:active {
   transform: scale(0.96);
 }
+
+/* Slider */
+.slider {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--n-s3);
+  direction: ltr;
+}
+
+.slider__value {
+  min-width: 44px;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 220px;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--n-butter) var(--pct), var(--n-fill-hover) var(--pct));
+  outline: none;
+}
+
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--n-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--n-butter);
+  outline-offset: 2px;
+}

@@ -72,6 +72,14 @@ pub struct Settings {
     pub overlay_offsets: HashMap<String, i32>,
     pub sounds_muted: bool,
     pub reduce_motion: bool,
+    /// NIMI's nominal size in the capsule (48–96); the capsule scales with it.
+    pub nimi_size: u32,
+    pub winter: WinterMode,
+    /// Snowfall around the capsule in winter (hat and scarf stay when off).
+    pub snow: bool,
+    /// Minutes of inactivity after getting bored before sleeping; 0 = never.
+    pub sleep_after_min: u32,
+    pub nuri_activity: NuriActivity,
 }
 
 impl Default for Settings {
@@ -83,8 +91,35 @@ impl Default for Settings {
             overlay_offsets: HashMap::new(),
             sounds_muted: false,
             reduce_motion: false,
+            nimi_size: 64,
+            winter: WinterMode::Auto,
+            snow: true,
+            sleep_after_min: 10,
+            nuri_activity: NuriActivity::Normal,
         }
     }
+}
+
+/// «زينة الشتاء»: auto = Dec 1 → end of Feb by the device date.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum WinterMode {
+    #[default]
+    Auto,
+    Always,
+    Off,
+}
+
+/// «نشاط نوري»: how fast Nuri orbits in the normal state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum NuriActivity {
+    Calm,
+    #[default]
+    Normal,
+    Active,
 }
 
 #[tauri::command]

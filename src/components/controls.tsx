@@ -1,3 +1,4 @@
+import type React from "react";
 import "./controls.css";
 
 /** On/off switch (design board 18): butter when on, dark fill when off. */
@@ -51,5 +52,41 @@ export function Segmented<T extends string>({
         </button>
       ))}
     </div>
+  );
+}
+
+/** Range slider with the value shown beside it (board 16: «حجمه في الكبسولة»). */
+export function Slider({
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+  label,
+  format = (v) => String(v),
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (next: number) => void;
+  label: string;
+  format?: (v: number) => string;
+}) {
+  const pct = ((value - min) / (max - min)) * 100;
+  return (
+    <label className="slider">
+      <span className="slider__value">{format(value)}</span>
+      <input
+        type="range"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        style={{ "--pct": `${pct}%` } as React.CSSProperties}
+        onChange={(e) => onChange(Number(e.currentTarget.value))}
+      />
+    </label>
   );
 }
