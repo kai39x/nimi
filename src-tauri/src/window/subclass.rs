@@ -18,7 +18,8 @@ use windows::{
         UI::{
             Shell::{DefSubclassProc, SetWindowSubclass},
             WindowsAndMessaging::{
-                MA_NOACTIVATE, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_MOUSEACTIVATE, WM_SETTINGCHANGE,
+                GetWindowLongPtrW, GWL_EXSTYLE, MA_NOACTIVATE, WM_DISPLAYCHANGE, WM_DPICHANGED,
+                WM_MOUSEACTIVATE, WM_SETTINGCHANGE, WS_EX_NOACTIVATE,
             },
         },
     },
@@ -41,6 +42,14 @@ pub fn install(app: &AppHandle, overlay: &WebviewWindow) -> Result<(), Box<dyn s
         return Err("SetWindowSubclass failed".into());
     }
     Ok(())
+}
+
+/// While the panel is open the window is made focusable (WS_EX_NOACTIVATE cleared); then clicks
+/// may activate it normally so typing and Esc work.
+fn overlay_focusable(hwnd: HWND) -> bool {
+    // SAFETY: plain style query on a live window handle.
+    let ex = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    (ex as u32 & WS_EX_NOACTIVATE.0) == 0
 }
 
 /// Display topology changes arrive in bursts; re-place once they settle.
@@ -70,7 +79,7 @@ unsafe extern "system" fn subclass_proc(
     match msg {
         // Clicks on the capsule must never steal focus from the app underneath; keyboard focus is
         // requested explicitly when the panel or the command bar needs it.
-        WM_MOUSEACTIVATE => return LRESULT(MA_NOACTIVATE as isize),
+        WM_MOUSEACTIVATE if !overlay_focusable(hwnd) => return LRESULT(MA_NOACTIVATE as isize),
         WM_DISPLAYCHANGE => schedule_replace(),
         WM_DPICHANGED => {
             if let Some(app) = APP.get() {

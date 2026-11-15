@@ -21,13 +21,22 @@ impl SettingsStore {
         fs::create_dir_all(&dir)?;
         let path = dir.join("settings.json");
 
-        let settings = match fs::read(&path) {
+        let mut settings: Settings = match fs::read(&path) {
             Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|err| {
                 log::warn!("settings.json is unreadable ({err}); starting from defaults");
                 Settings::default()
             }),
             Err(_) => Settings::default(),
         };
+        if settings.first_run_ms == 0 {
+            settings.first_run_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            if let Ok(json) = serde_json::to_vec_pretty(&settings) {
+                let _ = fs::write(&path, json);
+            }
+        }
 
         app.manage(SettingsStore {
             path,

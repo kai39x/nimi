@@ -75,7 +75,9 @@ fn cursor() -> Option<(i32, i32)> {
     Some((p.x, p.y))
 }
 
-fn primary_button_down() -> bool {
+/// `(held, pressed_since_last_poll)` for the primary button. The second flag comes from
+/// `GetAsyncKeyState`'s low bit, so a click shorter than one poll interval is still seen.
+fn primary_button() -> (bool, bool) {
     // SAFETY: plain Win32 queries without pointers.
     unsafe {
         let vk = if GetSystemMetrics(SM_SWAPBUTTON) != 0 {
@@ -83,7 +85,8 @@ fn primary_button_down() -> bool {
         } else {
             VK_LBUTTON
         };
-        (GetAsyncKeyState(i32::from(vk.0)) as u16 & 0x8000) != 0
+        let state = GetAsyncKeyState(i32::from(vk.0)) as u16;
+        ((state & 0x8000) != 0, (state & 0x0001) != 0)
     }
 }
 
@@ -175,7 +178,7 @@ fn run(app: AppHandle) {
             thread::sleep(TICK_FAR);
             continue;
         };
-        let down = primary_button_down();
+        let (down, clicked) = primary_button();
 
         if tick_drag(&app, &st, cx, down) {
             last_down = down;
@@ -216,11 +219,16 @@ fn run(app: AppHandle) {
             last_inside = inside;
         }
 
-        if st.expanded.load(Ordering::Relaxed) && down && !last_down && !inside {
+        let expanded = st.expanded.load(Ordering::Relaxed);
+        if expanded && (clicked || (down && !last_down)) && !inside {
             let _ = app.emit(events::OVERLAY_CLICK_OUTSIDE, ());
         }
 
         last_down = down;
-        thread::sleep(if near || down { TICK_NEAR } else { TICK_FAR });
+        thread::sleep(if near || down || expanded {
+            TICK_NEAR
+        } else {
+            TICK_FAR
+        });
     }
 }

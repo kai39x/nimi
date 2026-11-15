@@ -27,4 +27,8 @@ snow: boolean,
 /**
  * Minutes of inactivity after getting bored before sleeping; 0 = never.
  */
-sleepAfterMin: number, nuriActivity: NuriActivity, };
+sleepAfterMin: number, nuriActivity: NuriActivity, 
+/**
+ * Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
+ */
+firstRunMs: number, };

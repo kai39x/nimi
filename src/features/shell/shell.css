@@ -1,0 +1,86 @@
+/* One surface, two shapes. Compact: the 148×52 capsule (scaled with the size setting).
+   Expanded: the 880×620 panel. The morph is a spring on size / position / radius (420 ms). */
+.shell {
+  --nimi-scale: 1;
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  border-radius: var(--n-r-capsule);
+  overflow: visible;
+  transition:
+    width var(--n-dur-expand) var(--n-ease-spring),
+    height var(--n-dur-expand) var(--n-ease-spring),
+    top var(--n-dur-expand) var(--n-ease-spring),
+    border-radius var(--n-dur-expand) var(--n-ease-out),
+    transform var(--n-dur-press) var(--n-ease-out);
+}
+
+.shell--capsule {
+  top: var(--capsule-top);
+  width: calc(148px * var(--nimi-scale));
+  height: calc(52px * var(--nimi-scale));
+}
+
+.shell--capsule:active {
+  transform: scale(0.985);
+}
+
+.shell--panel {
+  top: var(--panel-top);
+  width: 880px;
+  height: 620px;
+  border-radius: var(--n-r-panel);
+}
+
+/* NIMI sits centered in the capsule, and on the top edge of the panel. */
+.shell__nimi {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  margin-top: calc(-4px * var(--nimi-scale));
+  pointer-events: none;
+  transition:
+    top var(--n-dur-expand) var(--n-ease-spring),
+    margin-top var(--n-dur-expand) var(--n-ease-spring);
+}
+
+.shell--panel .shell__nimi {
+  top: 0;
+  margin-top: 8px;
+  pointer-events: auto;
+}
+
+.shell__nimi .nimi {
+  transition:
+    width var(--n-dur-expand) var(--n-ease-spring),
+    height var(--n-dur-expand) var(--n-ease-spring);
+}
+
+.shell__nimi .nimi-units {
+  transition: transform var(--n-dur-expand) var(--n-ease-spring);
+}
+
+/* Winter: a soft snow cap on the upper rim (board 03). */
+.shell--winter::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: calc(-3px * var(--nimi-scale));
+  height: calc(11px * var(--nimi-scale));
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background:
+    radial-gradient(circle at 20% 100%, transparent 28%, var(--n-snow) 29%),
+    radial-gradient(circle at 50% 100%, transparent 36%, var(--n-snow) 37%),
+    radial-gradient(circle at 80% 100%, transparent 30%, var(--n-snow) 31%);
+  background-color: var(--n-snow);
+  mask: linear-gradient(#000, #000) top / 100% 55% no-repeat;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.shell--panel.shell--winter::before {
+  left: 36%;
+  right: 36%;
+}

@@ -49,9 +49,11 @@ pub fn run() {
             ipc::start_overlay_drag,
             ipc::recenter_overlay,
             ipc::set_overlay_expanded,
+            ipc::focus_overlay,
             ipc::open_settings_window,
             ipc::set_tray_state,
             ipc::dev_window_flags,
+            ipc::dev_hittest_state,
         ])
         .on_window_event(|win, event| match (win.label(), event) {
             (

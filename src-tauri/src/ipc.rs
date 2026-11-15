@@ -80,6 +80,9 @@ pub struct Settings {
     /// Minutes of inactivity after getting bored before sleeping; 0 = never.
     pub sleep_after_min: u32,
     pub nuri_activity: NuriActivity,
+    /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
+    #[ts(type = "number")]
+    pub first_run_ms: u64,
 }
 
 impl Default for Settings {
@@ -96,6 +99,7 @@ impl Default for Settings {
             snow: true,
             sleep_after_min: 10,
             nuri_activity: NuriActivity::Normal,
+            first_run_ms: 0,
         }
     }
 }
@@ -245,6 +249,13 @@ pub fn set_overlay_expanded(state: State<'_, Arc<OverlayState>>, expanded: bool)
         .store(expanded, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// Gives the overlay keyboard focus while the panel / command bar is open (Esc, typing) and
+/// makes it non-activatable again afterwards so it never steals focus in compact mode.
+#[tauri::command]
+pub fn focus_overlay(app: AppHandle, focus: bool) -> Result<(), String> {
+    window::set_overlay_focus(&app, focus).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
     // Windows are created on the main thread; commands run on the async runtime.
@@ -309,4 +320,25 @@ pub fn dev_window_flags(
         target.set_ignore_cursor_events(v).map_err(err)?;
     }
     Ok(())
+}
+
+/// Dev-only: what the hit-test loop currently sees.
+#[tauri::command]
+pub fn dev_hittest_state(state: State<'_, Arc<OverlayState>>) -> Result<serde_json::Value, String> {
+    if !cfg!(debug_assertions) {
+        return Err("dev builds only".into());
+    }
+    use std::sync::atomic::Ordering;
+    let g = *state.geometry.lock().expect("geometry lock");
+    let rects = state.rects.lock().expect("hit rects lock").clone();
+    Ok(serde_json::json!({
+        "geometry": { "x": g.x, "y": g.y, "scale": g.scale },
+        "rects": rects,
+        "interactive": state.interactive.load(Ordering::Relaxed),
+        "expanded": state.expanded.load(Ordering::Relaxed),
+        "visible": state.visible.load(Ordering::Relaxed),
+        "fullscreen": state.fullscreen.load(Ordering::Relaxed),
+        "dragging": state.drag.lock().expect("drag lock").is_some(),
+        "hwnd": state.hwnd.load(Ordering::Relaxed),
+    }))
 }

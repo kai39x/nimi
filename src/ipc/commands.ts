@@ -28,6 +28,7 @@ export const recenterOverlay = () => invoke<void>("recenter_overlay");
 export const setOverlayExpanded = (expanded: boolean) =>
   invoke<void>("set_overlay_expanded", { expanded });
 export const openSettingsWindow = () => invoke<void>("open_settings_window");
+export const focusOverlay = (focus: boolean) => invoke<void>("focus_overlay", { focus });
 
 // Tray
 export const setTrayState = (state: TrayState) => invoke<void>("set_tray_state", { state });

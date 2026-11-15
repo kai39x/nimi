@@ -4,7 +4,8 @@ import { Events, onEvent } from "@/ipc/events";
 import type { OverlayVisibility } from "@/ipc/generated/OverlayVisibility";
 import { useSettings } from "@/lib/settings";
 import { isWinter } from "@/lib/winter";
-import { Capsule, DEFAULT_NIMI_SIZE } from "@/features/capsule/Capsule";
+import { Shell } from "@/features/shell/Shell";
+import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import { DropDiagnostics } from "./DropDiagnostics";
 import { Snow } from "./Snow";
 import "./overlay.css";
@@ -28,7 +29,7 @@ export function OverlayRoot() {
   return (
     <div className={"overlay" + (visibility.visible ? "" : " overlay--hidden")}>
       {snowing && <Snow width={340 * scale} height={190 * scale} />}
-      <Capsule />
+      <Shell />
       {import.meta.env.DEV && <DropDiagnostics />}
     </div>
   );

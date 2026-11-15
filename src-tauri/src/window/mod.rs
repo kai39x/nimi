@@ -63,6 +63,8 @@ pub struct OverlayState {
     pub visible: AtomicBool,
     /// Raw HWND of the overlay (0 until setup).
     pub hwnd: AtomicIsize,
+    /// The window that had focus before the panel took it; focus goes back there on collapse.
+    pub prev_foreground: AtomicIsize,
 }
 
 pub fn state(app: &AppHandle) -> Arc<OverlayState> {
@@ -116,5 +118,55 @@ pub fn refresh_geometry(app: &AppHandle) {
             y: pos.y,
             scale,
         };
+    }
+}
+
+/// Panel / command bar open → the overlay may take keyboard focus; closed → back to a window
+/// that can never be activated (compact mode must not steal focus from the app underneath),
+/// and focus returns to whatever app had it before the panel opened.
+pub fn set_overlay_focus(app: &AppHandle, focus: bool) -> tauri::Result<()> {
+    let overlay = app
+        .get_webview_window(OVERLAY_LABEL)
+        .ok_or(tauri::Error::WindowNotFound)?;
+    let st = state(app);
+    let ours = st.hwnd.load(Ordering::Relaxed);
+    if focus {
+        let fg = foreground::current();
+        if fg != 0 && fg != ours {
+            st.prev_foreground.store(fg, Ordering::Relaxed);
+        }
+        overlay.set_focusable(true)?;
+        overlay.set_focus()?;
+    } else {
+        overlay.set_focusable(false)?;
+        let prev = st.prev_foreground.swap(0, Ordering::Relaxed);
+        if foreground::current() == ours && prev != 0 {
+            foreground::restore(prev);
+        }
+    }
+    Ok(())
+}
+
+mod foreground {
+    use std::ffi::c_void;
+    use windows::Win32::{
+        Foundation::HWND,
+        UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow},
+    };
+
+    pub fn current() -> isize {
+        // SAFETY: no arguments; returns a handle or null.
+        unsafe { GetForegroundWindow().0 as isize }
+    }
+
+    /// Gives focus back to `hwnd`. Allowed because our process is the foreground one right now.
+    pub fn restore(hwnd: isize) {
+        let h = HWND(hwnd as *mut c_void);
+        // SAFETY: plain Win32 calls on a handle we validate first.
+        unsafe {
+            if IsWindow(Some(h)).as_bool() {
+                let _ = SetForegroundWindow(h);
+            }
+        }
     }
 }

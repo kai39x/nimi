@@ -12,7 +12,9 @@ const files = import.meta.glob("@design/icons/ui/*.svg", {
 
 const byName = new Map<string, string>();
 for (const [path, svg] of Object.entries(files)) {
-  byName.set(path.split("/").pop()!.replace(/\.svg$/, ""), svg);
+  // The exported assets carry C2PA provenance blocks; they are dead weight once inlined.
+  const clean = svg.replace(/<metadata[\s\S]*?<\/metadata>/gi, "").replace(/\s+xmlns:c2pa="[^"]*"/g, "");
+  byName.set(path.split("/").pop()!.replace(/\.svg$/, ""), clean);
 }
 
 export type IconName =

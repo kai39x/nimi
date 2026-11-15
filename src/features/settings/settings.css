@@ -142,7 +142,22 @@
 }
 
 .preview__capsule {
+  --nimi-scale: 1;
   pointer-events: none;
+  position: relative;
+  width: calc(148px * var(--nimi-scale));
+  height: calc(52px * var(--nimi-scale));
+  border-radius: var(--n-r-capsule);
+  display: grid;
+  place-items: center;
+  place-content: center;
+  transition:
+    width 200ms var(--n-ease-out),
+    height 200ms var(--n-ease-out);
+}
+
+.preview__capsule .nimi {
+  transform: translateY(calc(-4px * var(--nimi-scale)));
 }
 
 .preview__caption {

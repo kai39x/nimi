@@ -100,6 +100,20 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 - Nuri never jumps: the orbit nodes stay mounted across moods and the animation's current time is
   rescaled to the new period on mood change (`Nimi.tsx`, `useLayoutEffect`).
 
+### What phase 3 taught us (the panel)
+
+- **Hand focus back.** The panel makes the overlay focusable so Esc and typing work. If the overlay
+  keeps the foreground after collapsing, Chromium never throttles it and idle CPU jumps ~5×. On
+  open we remember the previous foreground window; on collapse we make the overlay non-activatable
+  again and `SetForegroundWindow` the old one (`window/mod.rs`, `set_overlay_focus`).
+- **Single vs double click.** A single click waits 260 ms before morphing; otherwise the panel opens
+  under the cursor and the second click of a double-click lands outside the old capsule rect.
+- Click-outside uses `GetAsyncKeyState`'s "pressed since last call" bit, and the hit-test loop polls
+  at 16 ms while the panel is open, so even very short clicks collapse it.
+- The panel content unmounts 320 ms after it closes; a closed panel costs nothing.
+- Measured on 4K @ 200 %, 143 Hz: idle with the panel closed ≈ 3–5 % of one core for the whole
+  process tree (≈0.3–0.4 % of the machine).
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

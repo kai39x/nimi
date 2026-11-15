@@ -29,8 +29,10 @@ Tauri downloads NSIS into `%LOCALAPPDATA%\tauri` on the first `tauri build` (use
 ```
 src/                         React (TypeScript)
   app/                       root shell; routes by window label (overlay / settings)
-  features/<name>/           one folder per feature: overlay, character, capsule, panel, music, system,
-                             feed, pocket, shortcuts, commandbar, notifications, games, settings, onboarding
+  features/<name>/           one folder per feature: overlay (click-through, hit rects, drag), shell (the one
+                             glass surface: capsule ↔ panel morph), panel (header, tabs, Home), character,
+                             music, system, feed, pocket, shortcuts, commandbar, notifications, games,
+                             settings, onboarding
   ipc/                       commands.ts (typed invoke wrappers), events.ts, generated/ (ts-rs output — never edit)
   i18n/                      ar.json, en.json, t()
   lib/                       sounds, store, utils
@@ -53,6 +55,7 @@ scripts/                     screenshot.ps1 (DPI-aware capture), cdp.py (drive a
 - **Rust**: one module per feature. Windows-only code behind `#[cfg(windows)]`. COM/WinRT work (SMTC, Core Audio, hooks) runs on its own thread with its own message loop; never block the main thread. Prefer Tauri's window API; drop to the `windows` crate only when Tauri has no API, and say why in a comment.
 - **Safety**: deletion goes through the `trash` crate (Recycle Bin) only. Never touch system/protected paths. Boost closes only the processes the user ticked. No fake "RAM cleaning".
 - **Character rig**: `src/features/character/` — `rig/parts.tsx` is the geometry port (never redraw), `rig/moods.ts` the 17-mood table, `Nimi.tsx` the layered component (compositor wrappers, see docs/PLAN.md "phase 2"), `useNimiMood.ts` the state machine; other features drive moods with `setMoodOverride`. In dev, `window.__nimi.setMood('happy')` forces a mood for screenshots.
+- **Shell & panel**: `features/shell/Shell.tsx` owns compact/expanded state, the hit rect, the mood machine and the morph (`constants.ts` has the sizes); `features/panel/` renders the header, `TabBar` and tabs. Other tabs land in their phases; until then they show the approved «يجي قريب» placeholder. Open = `setOverlayExpanded(true)` + `focusOverlay(true)` (Rust then reports clicks outside and the window may take keyboard focus); close reverses both.
 - **Performance budget**: idle CPU < 1 %; system stats every 2 s with the panel open, 10 s when compact; pause all animation and timers while hidden.
 - **Dev-only switches** (debug builds): `NIMI_DEV_SKIP=clickthrough,subclass,hittest,fullscreen` disables parts of the overlay setup; the `dev_window_flags` command flips window styles at runtime. Both exist to bisect Win32 behaviour with `scripts/cdp.py`.
 - **Window rules learned the hard way** (see docs/PLAN.md "What phase 1 taught us"): never `focus: false` on a window that must accept file drops; secondary windows are declared in `tauri.conf.json`, created hidden, and only shown/hidden at runtime.

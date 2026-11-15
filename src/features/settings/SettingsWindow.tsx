@@ -10,8 +10,7 @@ import { updateSettings, useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
 import { DropDiagnostics } from "@/features/overlay/DropDiagnostics";
 import { Nimi } from "@/features/character/Nimi";
-import { DEFAULT_NIMI_SIZE } from "@/features/capsule/Capsule";
-import "@/features/capsule/capsule.css";
+import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import "./settings.css";
 
 type SectionId = "general" | "character";
@@ -153,7 +152,7 @@ export function SettingsWindow() {
             <section className="settings__content">
               <div className="preview">
                 <div
-                  className="capsule n-glass preview__capsule"
+                  className="preview__capsule n-glass"
                   style={{ "--nimi-scale": settings.nimiSize / DEFAULT_NIMI_SIZE } as CSSProperties}
                 >
                   <Nimi
