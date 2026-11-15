@@ -1,38 +1,27 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref } from "react";
 import "@design/character/nimi.css";
 import "./nimi.css";
-import { DEFAULT_ORBIT_SECONDS, MOOD_SPECS, type Mood } from "./rig/moods";
-import {
-  BODY,
-  BODY_D,
-  Beanie,
-  Blush,
-  CORAL,
-  DEEP,
-  FRAME_UNITS,
-  MIST,
-  MOON,
-  MoonArt,
-  Mouth,
-  Note,
-  OrbitLine,
-  PERIM,
-  ROSE,
-  SAT_ART,
-  Scarf,
-  Star,
-  VIEW_BOX,
-  VolumeArc,
-  eyes,
-  orbitPoint,
-  type MoonFace,
-} from "./rig/parts";
+import { NimiEngine, type NimiElements } from "./engine";
+import type { Mood } from "./rig/moods";
+import { FRAME_UNITS, SAT_ART, VIEW_BOX, VolumeArc } from "./rig/parts";
+import { BODY_SVG, FRECKLES_SVG, RIM_SVG, WINTER_SVG } from "./rig/rigData";
 
 /** Frame pixels per nominal size unit: size 64 draws the 208-unit frame at 78 px (board 06). */
 const FRAME_PER_SIZE = 78 / 64;
-/** viewBox origin: unit (x, y) sits at left = x + 4, top = y - 24 inside the 208 px stage. */
-const OX = 4;
-const OY = -24;
+/** At this nominal size and below NIMI uses the small variant (REFINEMENTS.md §2). */
+const SMALL_MAX_SIZE = 72;
+
+/** What the shell can do to NIMI besides changing his mood. */
+export interface NimiHandle {
+  /** Click: jelly impulse + small hop. */
+  poke(): void;
+  /** Any interaction (hover, press): postpones idle behaviors and cuts a running one short. */
+  touch(): void;
+  /** The capsule is being dragged; pointer velocity in CSS px/s. */
+  drag(vx: number, vy: number): void;
+  /** The drag ended with this pointer velocity (CSS px/s). */
+  release(vx: number, vy: number): void;
+}
 
 export interface NimiProps {
   mood: Mood;
@@ -49,14 +38,15 @@ export interface NimiProps {
   reducedMotion?: boolean;
   /** Multiplier on Nuri's orbit period (calm 1.4 · normal 1 · active 0.7). */
   nuriPace?: number;
+  /** Random yawns, stretches, hums… while idle (ANIMATION.md §4). Default on. */
+  idleBehaviors?: boolean;
   className?: string;
   style?: CSSProperties;
+  ref?: Ref<NimiHandle>;
 }
 
-type OrbitRegistry = Map<Element, { phase: number; durMs: number; ready: boolean }>;
-
-/** A full-frame SVG layer: same viewBox as the reference, drawn in rig units. */
-function Layer({ className, children }: { className?: string; children: ReactNode }) {
+/** A full-frame SVG in rig units (same viewBox as the reference). */
+function Frame({ className, children }: { className?: string; children?: ReactNode }) {
   return (
     <svg className={"nimi-svg" + (className ? ` ${className}` : "")} viewBox={VIEW_BOX} xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       {children}
@@ -65,13 +55,11 @@ function Layer({ className, children }: { className?: string; children: ReactNod
 }
 
 /**
- * NIMI — the character (design spec §2, `design/character/nimi-reference.html`).
+ * NIMI — the character (`design/character/animation-lab.html`, ANIMATION.md, REFINEMENTS.md).
  *
- * Same geometry and the same approved keyframes as the reference, but the layers that move
- * every frame (shadow, lift, squash, orbit, Nuri, glow, face) are HTML wrappers sized in rig
- * units (a 208 px stage scaled to the frame), so their transforms run on the compositor and
- * the SVG is only re-rasterized when something inside it really changes. The orbit nodes stay
- * mounted across moods and their animation time is rescaled on change, so Nuri never jumps.
+ * React renders a fixed skeleton of HTML layers on a 208 px unit stage; `NimiEngine` fills the
+ * SVG slots with the lab's markup (eyes, mouth, blush, extras, rings, Nuri's face) and moves the
+ * layers with springs every frame. React re-renders only when props change.
  */
 export function Nimi({
   mood,
@@ -82,425 +70,168 @@ export function Nimi({
   winter = false,
   reducedMotion = false,
   nuriPace = 1,
+  idleBehaviors = true,
   className,
   style,
+  ref,
 }: NimiProps) {
-  const spec = MOOD_SPECS[mood];
   const gid = useId().replace(/:/g, "");
   const frame = size * FRAME_PER_SIZE;
-  const lifted = mood === "grabbed";
-  const orbitDur = (spec.moon.kind === "orbit" ? spec.moon.dur : DEFAULT_ORBIT_SECONDS) * nuriPace;
-  const moonPhase = spec.moon.kind === "orbit" ? spec.moon.phase : 0.1;
-  const moonFace: MoonFace = spec.moon.face;
+  const small = size <= SMALL_MAX_SIZE;
   const satCount = Math.min(satellites, 8);
-  const moonOrbiting = spec.moon.kind === "orbit";
-  const tint = mood === "error" ? CORAL : undefined;
 
-  // --- orbit time continuity -----------------------------------------------------------------
-  const registry = useRef<OrbitRegistry>(new Map());
-  const register = (phase: number) => (el: HTMLDivElement | null) => {
-    if (!el) return;
-    const entry = registry.current.get(el);
-    if (entry) entry.phase = phase;
-    else registry.current.set(el, { phase, durMs: orbitDur * 1000, ready: false });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const els = useRef<Partial<NimiElements>>({ sats: [], satFrames: [] });
+  const engine = useRef<NimiEngine | null>(null);
+  const slot = <K extends keyof NimiElements>(key: K) => (el: NimiElements[K] | null) => {
+    if (el) els.current[key] = el;
   };
 
+  const opts = { reduceMotion: reducedMotion, winter, nuriPace, idleBehaviors };
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
+
+  // Satellites come and go with the pocket; the engine reads these arrays every frame.
   useLayoutEffect(() => {
-    const durMs = orbitDur * 1000;
-    for (const [el, entry] of registry.current) {
-      if (!el.isConnected) {
-        registry.current.delete(el);
-        continue;
-      }
-      for (const anim of el.getAnimations()) {
-        const now = typeof anim.currentTime === "number" ? anim.currentTime : 0;
-        const progress = entry.ready ? (((now / entry.durMs) % 1) + 1) % 1 : entry.phase;
-        anim.currentTime = progress * durMs;
-      }
-      entry.durMs = durMs;
-      entry.ready = true;
-    }
-  }, [orbitDur, mood, satCount]);
-
-  // --- mood transition squash ----------------------------------------------------------------
-  const [switching, setSwitching] = useState(false);
-  const firstMood = useRef(true);
-  useEffect(() => {
-    if (firstMood.current) {
-      firstMood.current = false;
-      return;
-    }
-    setSwitching(true);
-    const t = window.setTimeout(() => setSwitching(false), 320);
-    return () => window.clearTimeout(t);
-  }, [mood]);
-
-  // --- randomized blinks (4–7 s, sometimes double) and glances ---------------------------------
-  const eyeSpec = eyes(spec.eyes);
-  const [blinking, setBlinking] = useState(false);
-  const [glance, setGlance] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (!eyeSpec.blinkable) return;
-    let timer = 0;
-    let inner = 0;
-    const schedule = () => {
-      timer = window.setTimeout(
-        () => {
-          if (document.visibilityState === "visible") {
-            setBlinking(true);
-            inner = window.setTimeout(() => setBlinking(false), 230);
-            if (Math.random() < 0.3) {
-              inner = window.setTimeout(() => {
-                setBlinking(true);
-                inner = window.setTimeout(() => setBlinking(false), 200);
-              }, 330);
-            }
-          }
-          schedule();
-        },
-        4000 + Math.random() * 3000,
-      );
-    };
-    schedule();
-    return () => {
-      window.clearTimeout(timer);
-      window.clearTimeout(inner);
-    };
-  }, [eyeSpec.blinkable]);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setGlance({ x: 0, y: 0 });
-      return;
-    }
-    let timer = 0;
-    const schedule = () => {
-      timer = window.setTimeout(
-        () => {
-          if (document.visibilityState === "visible") {
-            setGlance(Math.random() < 0.35 ? { x: 0, y: 0 } : { x: (Math.random() - 0.5) * 7, y: (Math.random() - 0.4) * 3 });
-          }
-          schedule();
-        },
-        3000 + Math.random() * 6000,
-      );
-    };
-    schedule();
-    return () => window.clearTimeout(timer);
-  }, [reducedMotion]);
-
-  // --- ring sparkle ----------------------------------------------------------------------------
-  // stroke-dashoffset cannot run on the compositor; a CSS animation would make the main thread
-  // tick every display frame. A 15 fps timer moving the offset is visually identical and lets
-  // the main thread sleep between updates.
-  const rootRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (spec.orbit !== "normal") return;
     const root = rootRef.current;
     if (!root) return;
-    const pdur = (24 * orbitDur * 2) / PERIM; // seconds per 24-unit dash cycle (reference)
-    const start = performance.now();
-    const tick = () => {
-      if (document.visibilityState !== "visible") return;
-      const cycles = ((performance.now() - start) / 1000) / pdur;
-      const offset = (cycles % 1) * 24;
-      root.querySelectorAll<SVGElement>(".dashB").forEach((el) => {
-        el.style.strokeDashoffset = `${offset.toFixed(2)}`;
-      });
-      root.querySelectorAll<SVGElement>(".dashF").forEach((el) => {
-        el.style.strokeDashoffset = `${(-offset).toFixed(2)}`;
-      });
+    els.current.sats = Array.from(root.querySelectorAll<HTMLElement>(".n-sat"));
+    els.current.satFrames = Array.from(root.querySelectorAll<HTMLElement>(".n-sat-frame"));
+  }, [satCount]);
+
+  useLayoutEffect(() => {
+    const e = new NimiEngine(els.current as NimiElements, optsRef.current, mood);
+    engine.current = e;
+    return () => {
+      e.dispose();
+      engine.current = null;
     };
-    const id = window.setInterval(tick, 66);
-    return () => window.clearInterval(id);
-  }, [spec.orbit, orbitDur]);
+    // The engine lives as long as the component; mood and options are pushed below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // --- Nuri ------------------------------------------------------------------------------------
-  /** One orbiting thing (Nuri, a trail ghost or a satellite) as compositor layers. */
-  const orbiter = (
-    key: string,
-    layer: "back" | "front",
-    phase: number,
-    content: ReactNode,
-    opacity = 1,
-    hidden = false,
-  ) => {
-    const p = orbitPoint(phase);
-    const orb = (
-      <div
-        className="orb"
-        ref={register(phase)}
-        style={{
-          animationDuration: `${orbitDur}s`,
-          transform: `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${p.s.toFixed(3)})`,
-        }}
-      >
-        <div className="orb__upright">{content}</div>
-      </div>
-    );
-    return (
-      <div key={key} className={"orbit-frame" + (hidden ? " is-parked" : "")} style={{ opacity: layer === "back" ? opacity * 0.82 : opacity }}>
-        {layer === "front" ? (
-          <div className="orbF" ref={register(phase)} style={{ animationDuration: `${orbitDur}s`, opacity: p.front ? 1 : 0 }}>
-            {orb}
-          </div>
-        ) : (
-          orb
-        )}
-      </div>
-    );
-  };
+  useEffect(() => engine.current?.setMood(mood), [mood]);
+  useEffect(() => engine.current?.setOptions(opts), [reducedMotion, winter, nuriPace, idleBehaviors]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const nuri = (halo: boolean) => (
-    <>
-      {halo && (
-        <div className="L-glow glow">
-          <svg viewBox="-24 -24 48 48" aria-hidden="true">
-            <circle r={24} fill={`url(#${gid})`} />
-          </svg>
-        </div>
-      )}
-      <div className="L-roll moon">
-        <svg viewBox="-16 -16 32 32" aria-hidden="true">
-          <MoonArt face={moonFace} />
-        </svg>
-      </div>
-    </>
+  useImperativeHandle(
+    ref,
+    () => ({
+      poke: () => engine.current?.poke(),
+      touch: () => engine.current?.touch(),
+      drag: (vx, vy) => engine.current?.drag(vx, vy),
+      release: (vx, vy) => engine.current?.release(vx, vy),
+    }),
+    [],
   );
 
-  const satellite = (i: number) => (
-    <div className="sat">
-      <svg viewBox="-10 -10 20 20" aria-hidden="true">
-        <g className="L-roll">{SAT_ART[i % SAT_ART.length]}</g>
-      </svg>
-    </div>
-  );
-
-  const orbitLayer = (layer: "back" | "front") => (
-    <div className={"L-orb orbit-layer orbit-layer--" + layer}>
-      <Layer className="ring">
-        <defs>
-          <radialGradient id={gid}>
-            <stop offset="0" stopColor={MOON} stopOpacity=".55" />
-            <stop offset="1" stopColor={MOON} stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <OrbitLine part={layer} style={spec.orbit} speed={orbitDur} />
-        {layer === "front" && volume != null && <VolumeArc volume={Math.max(0, Math.min(1, volume))} />}
-      </Layer>
-      <div className="orbit-tilt">
-        {orbiter(`${layer}-nuri`, layer, moonPhase, nuri(true), 1, !moonOrbiting)}
-        {mood === "working" && orbiter(`${layer}-trail1`, layer, moonPhase - 0.035, nuri(false), 0.35)}
-        {mood === "working" && orbiter(`${layer}-trail2`, layer, moonPhase - 0.07, nuri(false), 0.15)}
-        {Array.from({ length: satCount }, (_, i) =>
-          orbiter(`${layer}-sat-${i}`, layer, (moonPhase + (i + 1) / (satCount + 1)) % 1, satellite(i), layer === "back" ? 0.98 : 1),
-        )}
-      </div>
-    </div>
-  );
-
-  /** Nuri parked somewhere (peeking, hiding, fallen, asleep on the head). */
-  const parkedMoon = (x: number, y: number, halo = false, extra?: ReactNode) => (
-    <div key={`parked-${mood}`} className="parked" style={{ left: x + OX, top: y + OY }}>
-      {extra}
-      {halo && (
-        <div className="L-glow glow">
-          <svg viewBox="-22 -22 44 44" aria-hidden="true">
-            <circle r={22} fill={`url(#${gid})`} />
-          </svg>
-        </div>
-      )}
-      <div className="L-moon">
-        <div className="L-roll moon">
-          <svg viewBox="-16 -16 32 32" aria-hidden="true">
-            <MoonArt face={moonFace} tint={tint} />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-
-  // --- mood extras (rare, so they stay plain SVG) ------------------------------------------------
-  const extras: ReactNode = (() => {
-    switch (mood) {
-      case "sleeping":
-        return (
-          [
-            [140, 74, 20, 0, 1],
-            [154, 60, 15, -1, 0.8],
-            [166, 48, 11, -2, 0.6],
-          ] as const
-        ).map(([x, y, fs, dl, op]) => (
-          <text key={x} className="zfloat" style={{ animationDelay: `${dl}s` }} x={x} y={y} fontFamily="Rubik, sans-serif" fontWeight={700} fontSize={fs} fill={MIST} opacity={op}>
-            z
-          </text>
-        ));
-      case "curious":
-        return (
-          <g transform="translate(152 66)">
-            <g className="L-x1">
-              <text x={-6} y={8} fontFamily="Rubik, sans-serif" fontWeight={700} fontSize={24} fill={MOON}>
-                ?
-              </text>
-            </g>
-          </g>
-        );
-      case "surprised":
-        return (
-          <g className="L-x1">
-            <path d="M70 62 L64 52 M100 56 L100 44 M130 62 L136 52" stroke="#fff" strokeWidth={3} strokeLinecap="round" />
-          </g>
-        );
-      case "excited":
-        return (
-          [
-            [26, 82, 6, 0],
-            [178, 74, 5, -0.5],
-            [186, 176, 4, -1],
-            [18, 160, 3.5, -0.8],
-            [100, 52, 4, -0.3],
-          ] as const
-        ).map(([sx, sy, ss, dl]) => <Star key={`${sx}-${sy}`} x={sx} y={sy} s={ss} fill="#fff" className="twinkle" style={{ animationDelay: `${dl}s` }} />);
-      case "working":
-        return [0, 10, 20].map((dx, i) => (
-          <circle key={dx} className="dot" style={{ animationDelay: `${(i * 0.18).toFixed(2)}s` }} cx={136 + dx} cy={66} r={3.2} fill={MIST} />
-        ));
-      case "error":
-        return (
-          <>
-            <g transform="translate(160 80)">
-              <g className="L-x1">
-                <circle r={11} fill={CORAL} />
-                <rect x={-1.6} y={-7.5} width={3.2} height={9} rx={1.6} fill="#fff" />
-                <circle cy={6} r={1.8} fill="#fff" />
-              </g>
-            </g>
-            <g className="L-x2">
-              <path d="M52 98 Q58 108 52 113 Q46 108 52 98 Z" fill="#A9E4FF" />
-            </g>
-          </>
-        );
-      case "music":
-        return (
-          <>
-            <Note x={150} y={76} fill={MOON} delay={0} />
-            <Note x={36} y={92} fill={ROSE} delay={-1.2} />
-            <Note x={168} y={112} fill={ROSE} delay={-0.6} />
-          </>
-        );
-      case "bored":
-        return (
-          <g className="L-x1">
-            <circle cx={114} cy={164} r={3} fill={MIST} opacity=".7" />
-            <circle cx={122} cy={161} r={4.5} fill={MIST} opacity=".5" />
-          </g>
-        );
-      case "dizzy":
-        return (
-          <g transform="translate(100 62) scale(1 .32)">
-            <g className="spin">
-              {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((a) => (
-                <Star key={a} x={30 * Math.cos(a)} y={30 * Math.sin(a)} s={5} fill={MOON} />
-              ))}
-            </g>
-          </g>
-        );
-      case "grabbed":
-        return <path d="M100 72 L100 30" stroke={MIST} strokeWidth={2} strokeDasharray="3 5" opacity=".5" />;
-      default:
-        return null;
-    }
-  })();
-
-  const feetY = lifted ? 210 : 204;
-  const headMoon = spec.moon.kind === "head" ? (winter ? { x: 138, y: 50 } : { x: spec.moon.x, y: spec.moon.y }) : null;
-  const attentionRings =
-    mood === "attention"
-      ? [0, -0.75].map((dl) => (
-          <div key={dl} className="pring ring-pulse" style={{ animationDelay: `${dl}s` }}>
-            <svg viewBox="-16 -16 32 32" aria-hidden="true">
-              <circle r={14} fill="none" stroke={MOON} strokeWidth={2} />
-            </svg>
-          </div>
-        ))
-      : null;
-
-  const classes = ["nimi", `m-${mood}`, reducedMotion && "nimi--still", switching && "is-switching", className].filter(Boolean).join(" ");
+  const scaleAbout = (cx: number, cy: number, s: number) => `translate(${cx} ${cy}) scale(${s}) translate(${-cx} ${-cy})`;
+  const classes = ["nimi", `m-${mood}`, small && "nimi--small", reducedMotion && "nimi--still", className].filter(Boolean).join(" ");
 
   return (
-    <div
-      ref={rootRef}
-      className={classes}
-      role="img"
-      aria-label={`NIMI — ${mood}`}
-      style={{ width: frame, height: frame, ...style }}
-      data-frame-units={FRAME_UNITS}
-    >
+    <div ref={rootRef} className={classes} role="img" aria-label={`NIMI — ${mood}`} style={{ width: frame, height: frame, ...style }}>
       <div className="nimi-stage">
         <div className="nimi-units" style={{ transform: `scale(${(frame / FRAME_UNITS).toFixed(4)})` }}>
-          {/* ground shadow: stays on the ground, shrinks when NIMI is in the air */}
-          <div className="L-sh shadow">
-            <Layer>
-              <ellipse cx={100} cy={226} rx={lifted ? 26 : 40} ry={lifted ? 3.5 : 5} fill={BODY} opacity={lifted ? 0.08 : 0.18} />
-            </Layer>
+          {/* ground shadow: stays on the ground, shrinks and fades when NIMI is in the air */}
+          <div className="n-layer n-shadow" ref={slot("shadow")}>
+            <Frame>
+              <ellipse cx={100} cy={226} rx={40} ry={5} fill="#B4C0FF" />
+            </Frame>
           </div>
 
-          <div className="L-lift lift">
-            {orbitLayer("back")}
-            {spec.moon.kind === "static" && spec.moon.layer === "back" && parkedMoon(spec.moon.x, spec.moon.y)}
+          <div className="n-layer n-root" ref={slot("root")}>
+            <div className="n-layer n-orb n-orb--back" ref={slot("orbB")}>
+              <Frame>
+                <g ref={slot("ringB")} />
+              </Frame>
+            </div>
 
-            {/* body: squash & stretch from the feet */}
-            <div className="L-sq squash">
-              <div className="L-switch switch">
-                <Layer className="body">
-                  <g className="L-fl">
-                    <ellipse cx={82} cy={feetY} rx={12} ry={6.5} fill={DEEP} />
+            {/* body: rotation and squash pivot at the feet */}
+            <div className="n-layer n-body" ref={slot("body")}>
+              <Frame>
+                <defs>
+                  <radialGradient id={`${gid}b`} cx=".36" cy=".26" r=".85">
+                    <stop offset="0" stopColor="#D3DBFF" />
+                    <stop offset=".55" stopColor="#B4C0FF" />
+                    <stop offset="1" stopColor="#97A5F0" />
+                  </radialGradient>
+                </defs>
+                <g dangerouslySetInnerHTML={{ __html: BODY_SVG.replace("url(#nbb)", `url(#${gid}b)`) + (small ? "" : RIM_SVG) }} />
+                {belly && (
+                  <g opacity=".55">
+                    <path d="M92 170 h12 l5 5 v14 h-17 z" fill="#9DABF5" />
+                    <path d="M104 170 v5 h5" fill="none" stroke="#E3E8FF" strokeWidth={1.2} />
                   </g>
-                  <g className="L-fr">
-                    <ellipse cx={118} cy={feetY} rx={12} ry={6.5} fill={DEEP} />
-                  </g>
-                  <path d={BODY_D} fill={BODY} />
-                  <ellipse cx={74} cy={104} rx={11} ry={16} transform="rotate(38 74 104)" fill="#fff" opacity=".35" />
-                  <ellipse cx={100} cy={180} rx={38} ry={18} fill={MIST} opacity=".7" />
-                  {belly && (
-                    <g opacity=".55">
-                      <path d="M92 170 h12 l5 5 v14 h-17 z" fill={DEEP} />
-                      <path d="M104 170 v5 h5" fill="none" stroke={MIST} strokeWidth={1.2} />
-                    </g>
-                  )}
-                </Layer>
-
-                <div className="L-face face">
-                  <div className="L-glance" style={{ transform: `translate(${glance.x}px, ${glance.y}px)` }}>
-                    <Layer>
-                      <g className={mood === "shy" ? "L-x2" : undefined}>
-                        <Blush level={spec.blush} />
-                      </g>
-                      <Star x={58} y={156} s={4.5} fill={MOON} />
-                      <Star x={142} y={156} s={4.5} fill={MOON} />
-                      <g className="L-eyes">
-                        <g className={"L-blink" + (blinking ? " is-blinking" : "")}>{eyeSpec.shapes}</g>
-                      </g>
-                      <Mouth kind={spec.mouth} />
-                    </Layer>
-                  </div>
-                </div>
-
-                {winter && (
-                  <Layer className="winter">
-                    <Scarf />
-                    <Beanie />
-                  </Layer>
                 )}
-                {headMoon && parkedMoon(headMoon.x, headMoon.y, true)}
+              </Frame>
+
+              {/* face: trails the body a little */}
+              <div className="n-layer n-face" ref={slot("face")}>
+                <Frame>
+                  <g ref={slot("blush")} />
+                  {!small && <g dangerouslySetInnerHTML={{ __html: FRECKLES_SVG }} />}
+                </Frame>
+                <div className="n-layer n-eyes" ref={slot("eyesLayer")}>
+                  <Frame>
+                    <g transform={small ? scaleAbout(100, 140, 1.28) : undefined}>
+                      <g ref={slot("eyes")} />
+                    </g>
+                  </Frame>
+                </div>
+                <Frame className="n-mouth">
+                  <g transform={small ? scaleAbout(100, 160, 1.3) : undefined}>
+                    <g ref={slot("mouth")} />
+                  </g>
+                </Frame>
+              </div>
+
+              {winter && <Frame className="n-winter">{<g dangerouslySetInnerHTML={{ __html: WINTER_SVG }} />}</Frame>}
+            </div>
+
+            <div className="n-layer n-orb n-orb--front" ref={slot("orbF")}>
+              <Frame>
+                <g ref={slot("ringF")} />
+                {volume != null && <VolumeArc volume={Math.max(0, Math.min(1, volume))} />}
+              </Frame>
+            </div>
+
+            {/* Nuri: the engine moves him and switches him in front of / behind the body */}
+            <div className="n-layer n-nuri-frame" ref={slot("nuriFrame")}>
+              {/* glow pulse and roll are on HTML wrappers so they run on the compositor */}
+              <div className="n-nuri" ref={slot("nuri")}>
+                <div className="n-glow L-glow">
+                  <svg viewBox="-24 -24 48 48" aria-hidden="true">
+                    <defs>
+                      <radialGradient id={`${gid}g`}>
+                        <stop offset="0" stopColor="#FFE7A0" stopOpacity=".55" />
+                        <stop offset="1" stopColor="#FFE7A0" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+                    <circle r={24} fill={`url(#${gid}g)`} />
+                  </svg>
+                </div>
+                <div className="n-moon L-roll">
+                  <svg viewBox="-16 -16 32 32" aria-hidden="true">
+                    <g ref={slot("moonArt")} />
+                  </svg>
+                </div>
               </div>
             </div>
 
-            {orbitLayer("front")}
-            {spec.moon.kind === "static" && spec.moon.layer === "front" && parkedMoon(spec.moon.x, spec.moon.y, mood === "attention", attentionRings)}
+            {Array.from({ length: satCount }, (_, i) => (
+              <div key={i} className="n-layer n-sat-frame">
+                <div className="n-sat">
+                  <div className="n-sat-roll L-roll">
+                    <svg viewBox="-10 -10 20 20" aria-hidden="true">
+                      {SAT_ART[i % SAT_ART.length]}
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ))}
 
-            {extras && <Layer className="extras">{extras}</Layer>}
+            <Frame className="n-extras">
+              <g ref={slot("extras")} />
+            </Frame>
           </div>
         </div>
       </div>

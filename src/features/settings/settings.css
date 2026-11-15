@@ -160,6 +160,17 @@
   transform: translateY(calc(-4px * var(--nimi-scale)));
 }
 
+/* «نيمي بس»: no glass, the box is NIMI's own frame (78 px at size 64), same center as in the capsule. */
+.preview__capsule--nimiOnly {
+  width: calc(78px * var(--nimi-scale));
+  height: calc(78px * var(--nimi-scale));
+  margin-block: calc(-13px * var(--nimi-scale));
+}
+
+.preview__capsule--nimiOnly .nimi {
+  transform: none;
+}
+
 .preview__caption {
   font-size: var(--n-fs-caption);
   color: var(--n-muted);

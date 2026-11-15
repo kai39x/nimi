@@ -57,6 +57,8 @@ pub struct OverlayState {
     pub drag: Mutex<Option<hittest::DragSession>>,
     /// A fullscreen app is in front of NIMI.
     pub fullscreen: AtomicBool,
+    /// A maximized foreground window's title bar / tab strip lies under the capsule (peek mode).
+    pub covered: AtomicBool,
     /// "Hide for 1 h" deadline.
     pub hidden_until: Mutex<Option<Instant>>,
     /// What we last told the window to be.

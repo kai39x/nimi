@@ -6,6 +6,7 @@ export const Events = {
   overlayDrag: "nimi://overlay/drag",
   overlayCursor: "nimi://overlay/cursor",
   overlayClickOutside: "nimi://overlay/click-outside",
+  overlayCovered: "nimi://overlay/covered",
   settingsChanged: "nimi://settings/changed",
   trayOpen: "nimi://tray/open",
 } as const;

@@ -21,6 +21,8 @@ pub mod events {
     pub const OVERLAY_DRAG: &str = "nimi://overlay/drag";
     pub const OVERLAY_CURSOR: &str = "nimi://overlay/cursor";
     pub const OVERLAY_CLICK_OUTSIDE: &str = "nimi://overlay/click-outside";
+    /// `bool`: a maximized window's title bar / tab strip lies under the capsule (peek mode).
+    pub const OVERLAY_COVERED: &str = "nimi://overlay/covered";
     pub const SETTINGS_CHANGED: &str = "nimi://settings/changed";
     pub const TRAY_OPEN: &str = "nimi://tray/open";
 }
@@ -80,6 +82,10 @@ pub struct Settings {
     /// Minutes of inactivity after getting bored before sleeping; 0 = never.
     pub sleep_after_min: u32,
     pub nuri_activity: NuriActivity,
+    /// «الكبسولة»: what the compact state shows (glass with NIMI, glass only, or NIMI alone).
+    pub capsule_style: CapsuleStyle,
+    /// «يطل»: over a maximized window the capsule slides up and only a 12 px strip stays.
+    pub peek_over_maximized: bool,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
     #[ts(type = "number")]
     pub first_run_ms: u64,
@@ -99,6 +105,8 @@ impl Default for Settings {
             snow: true,
             sleep_after_min: 10,
             nuri_activity: NuriActivity::Normal,
+            capsule_style: CapsuleStyle::NimiInCapsule,
+            peek_over_maximized: true,
             first_run_ms: 0,
         }
     }
@@ -124,6 +132,20 @@ pub enum NuriActivity {
     #[default]
     Normal,
     Active,
+}
+
+/// «الكبسولة»: how the compact state looks. The panel is always glass with NIMI on top.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum CapsuleStyle {
+    /// NIMI inside the glass capsule (board 06).
+    #[default]
+    NimiInCapsule,
+    /// The glass capsule alone, no character.
+    CapsuleOnly,
+    /// NIMI floating on his own, no glass.
+    NimiOnly,
 }
 
 #[tauri::command]
@@ -239,6 +261,15 @@ pub fn recenter_overlay(app: AppHandle) -> Result<(), String> {
 pub struct CursorProximity {
     pub near: bool,
     pub inside: bool,
+    /// Within 60 px of the hit rects, or the primary button is held close by (a file drag):
+    /// a peeking capsule slides down.
+    pub reveal: bool,
+}
+
+/// Whether a maximized window sits under the capsule right now (peek mode), for the first render.
+#[tauri::command]
+pub fn get_overlay_covered(state: State<'_, Arc<OverlayState>>) -> bool {
+    state.covered.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// Tells the hit-test loop whether the panel is open, so clicks outside it can collapse it.

@@ -84,6 +84,13 @@ export const ar = {
   "settings.nuri.active": "نشيط",
   "settings.reduceMotion": "تقليل الحركة",
   "settings.reduceMotion.sub": "يوقف النط والضغط، ويخلي الرمش والظهور بس",
+  "settings.capsuleStyle": "شكل الكبسولة",
+  "settings.capsuleStyle.sub": "وش يبان وهو مصغّر",
+  "settings.capsuleStyle.nimiInCapsule": "نيمي بالكبسولة",
+  "settings.capsuleStyle.capsuleOnly": "الكبسولة بس",
+  "settings.capsuleStyle.nimiOnly": "نيمي بس",
+  "settings.peek": "يطل فوق النوافذ المكبّرة",
+  "settings.peek.sub": "يطلع لفوق ويخلي شريط رفيع، عشان ما يغطي التبويبات",
 
   "overlay.recenter": "رجّع نيمي لمكانه",
 } as const;

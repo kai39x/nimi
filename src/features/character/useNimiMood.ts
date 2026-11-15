@@ -1,24 +1,33 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { Events, onEvent } from "@/ipc/events";
 import type { CursorProximity } from "@/ipc/generated/CursorProximity";
 import type { OverlayDragEvent } from "@/ipc/generated/OverlayDragEvent";
 import type { OverlayVisibility } from "@/ipc/generated/OverlayVisibility";
+import { setNimiPaused } from "./engine";
+import type { NimiHandle } from "./Nimi";
 import type { Mood } from "./rig/moods";
 
 /**
- * Mood state machine (design spec §2 / board 19):
+ * Mood state machine (design spec §2 / board 19, interaction rules from ANIMATION.md §1):
  *   idle → bored (no interaction) → sleeping (setting: 10/20/30 min, never) → wakes when the
- *   cursor comes near · hover/near → curious · click → happy · repeated clicks → shy ·
- *   drag → grabbed · shaken while dragging → dizzy.
+ *   cursor comes near · near / hover → curious · hover 1.8 s → love · click → happy 1.8 s ·
+ *   3 clicks in 1.5 s → shy · drag → grabbed · release → surprised, or dizzy when shaken
+ *   (≥ 4 direction flips).
+ * The yawn into sleep and the stretch out of it are played by the engine on the mood change.
  * Other features set moods through `setMoodOverride` (music, working, error, hungry, …).
  */
 
 const BORED_AFTER_MS = 3 * 60_000;
-const HAPPY_MS = 1500;
-const SHY_MS = 3600;
-const DIZZY_LINGER_MS = 1300;
-const SHY_CLICKS = 4;
-const SHY_WINDOW_MS = 3000;
+const HAPPY_MS = 1800;
+const SHY_MS = 2600;
+const SHY_CLICKS = 3;
+const SHY_WINDOW_MS = 1500;
+const LOVE_AFTER_MS = 1800;
+const LOVE_LINGER_MS = 600;
+const DIZZY_MS = 3200;
+const SURPRISED_MS = 1400;
+const SHAKE_FLIPS = 4;
+const SHAKE_WINDOW_MS = 1200;
 
 type Base = "idle" | "bored" | "sleeping";
 
@@ -39,31 +48,35 @@ export function setMoodOverride(mood: Mood | null, ttlMs?: number) {
 export interface MoodOptions {
   /** Minutes after getting bored before falling asleep; 0 = never. */
   sleepAfterMin: number;
+  /** The character, for the physical side of interactions (drag lean, throw, idle cut-off). */
+  nimi?: RefObject<NimiHandle | null>;
 }
 
-export function useNimiMood({ sleepAfterMin }: MoodOptions) {
+export function useNimiMood({ sleepAfterMin, nimi }: MoodOptions) {
   const [mood, setMood] = useState<Mood>("idle");
 
   const base = useRef<Base>("idle");
   const lastInteraction = useRef(Date.now());
   const near = useRef(false);
   const hovering = useRef(false);
+  const loved = useRef(false);
+  const loveTimer = useRef(0);
   const reaction = useRef<{ mood: Mood; until: number } | null>(null);
   const dragging = useRef(false);
-  const dizzy = useRef(false);
-  const dizzyUntil = useRef(0);
   const clicks = useRef<number[]>([]);
   const hidden = useRef(false);
   const sleepAfter = useRef(sleepAfterMin);
   sleepAfter.current = sleepAfterMin;
+  const handle = useRef(nimi);
+  handle.current = nimi;
 
   const compute = useCallback((): Mood => {
     const now = Date.now();
     if (override && (override.until === null || override.until > now)) return override.mood;
-    if (dragging.current) return dizzy.current ? "dizzy" : "grabbed";
-    if (dizzyUntil.current > now) return "dizzy";
+    if (dragging.current) return "grabbed";
     if (reaction.current && reaction.current.until > now) return reaction.current.mood;
     if (base.current === "sleeping") return "sleeping";
+    if (loved.current) return "love";
     if (near.current || hovering.current) return "curious";
     return base.current;
   }, []);
@@ -127,81 +140,126 @@ export function useNimiMood({ sleepAfterMin }: MoodOptions) {
     [touch],
   );
 
-  // Dragging: grabbed, and dizzy when shaken (direction reversals in quick succession).
+  const react = useCallback(
+    (next: Mood, ms: number) => {
+      reaction.current = { mood: next, until: Date.now() + ms };
+      window.setTimeout(refresh, ms + 20);
+      refresh();
+    },
+    [refresh],
+  );
+
+  // Dragging the capsule: grabbed, leaning with the pointer speed; on release surprised, or
+  // dizzy when shaken (≥ 4 horizontal direction flips in the last 1.2 s).
   useEffect(() => {
-    let lastX = 0;
-    let lastDir = 0;
-    let reversals: number[] = [];
+    let samples: Array<[number, number, number]> = [];
+    let flips: number[] = [];
+    let lastSign = 0;
+    const velocity = () => {
+      const n = samples.length;
+      if (n < 2) return { vx: 0, vy: 0 };
+      const a = samples[Math.max(0, n - 5)];
+      const b = samples[n - 1];
+      const dt = (b[0] - a[0]) / 1000 || 0.016;
+      return { vx: (b[1] - a[1]) / dt, vy: (b[2] - a[2]) / dt };
+    };
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
-      const dir = Math.sign(e.screenX - lastX);
-      if (dir !== 0 && lastDir !== 0 && dir !== lastDir) {
-        const now = Date.now();
-        reversals = [...reversals.filter((t) => now - t < 700), now];
-        if (reversals.length >= 4 && !dizzy.current) {
-          dizzy.current = true;
-          refresh();
+      const now = performance.now();
+      const prev = samples[samples.length - 1];
+      samples.push([now, e.screenX, e.screenY]);
+      samples = samples.filter((s) => now - s[0] < 200);
+      if (prev) {
+        const dx = e.screenX - prev[1];
+        const sign = Math.sign(dx);
+        if (Math.abs(dx) > 4 && sign !== 0) {
+          if (lastSign && sign !== lastSign) flips = [...flips.filter((t) => now - t < SHAKE_WINDOW_MS), now];
+          lastSign = sign;
         }
       }
-      if (dir !== 0) lastDir = dir;
-      lastX = e.screenX;
+      const { vx, vy } = velocity();
+      handle.current?.current?.drag(vx, vy);
     };
     window.addEventListener("pointermove", onMove);
     const off = onEvent<OverlayDragEvent>(Events.overlayDrag, (d) => {
       if (d.phase === "move" && !dragging.current) {
         dragging.current = true;
-        dizzy.current = false;
-        reversals = [];
+        samples = [];
+        flips = [];
+        lastSign = 0;
+        reaction.current = null;
+        handle.current?.current?.drag(0, 0);
         touch();
         refresh();
       }
       if (d.phase === "end" && dragging.current) {
         dragging.current = false;
-        if (dizzy.current) dizzyUntil.current = Date.now() + DIZZY_LINGER_MS;
-        dizzy.current = false;
+        const { vx, vy } = velocity();
+        handle.current?.current?.release(vx, vy);
+        const shaken = flips.filter((t) => performance.now() - t < SHAKE_WINDOW_MS).length >= SHAKE_FLIPS;
         touch();
-        refresh();
-        window.setTimeout(refresh, DIZZY_LINGER_MS + 20);
+        react(shaken ? "dizzy" : "surprised", shaken ? DIZZY_MS : SURPRISED_MS);
       }
     });
     return () => {
       window.removeEventListener("pointermove", onMove);
       off();
     };
-  }, [refresh, touch]);
+  }, [refresh, touch, react]);
 
   const onClick = useCallback(() => {
     const now = Date.now();
     clicks.current = [...clicks.current.filter((t) => now - t < SHY_WINDOW_MS), now];
     touch();
+    handle.current?.current?.poke();
     if (clicks.current.length >= SHY_CLICKS) {
       clicks.current = [];
-      reaction.current = { mood: "shy", until: now + SHY_MS };
-      window.setTimeout(refresh, SHY_MS + 20);
-    } else {
-      reaction.current = { mood: "happy", until: now + HAPPY_MS };
-      window.setTimeout(refresh, HAPPY_MS + 20);
+      react("shy", SHY_MS);
+    } else if (!reaction.current || reaction.current.until <= now || reaction.current.mood === "happy") {
+      react("happy", HAPPY_MS);
     }
-    refresh();
-  }, [refresh, touch]);
+  }, [touch, react]);
 
-  const onPointerEnter = useCallback(() => {
-    hovering.current = true;
-    if (base.current !== "idle") touch();
-    refresh();
-  }, [refresh, touch]);
+  // Hover: curious at once, love after 1.8 s of the mouse resting on him (ANIMATION.md §1).
+  const onPointerEnter = useCallback(
+    (e?: { pointerType?: string }) => {
+      hovering.current = true;
+      if (base.current !== "idle") touch();
+      handle.current?.current?.touch();
+      window.clearTimeout(loveTimer.current);
+      if (!e?.pointerType || e.pointerType === "mouse") {
+        loveTimer.current = window.setTimeout(() => {
+          if (!hovering.current || dragging.current) return;
+          loved.current = true;
+          refresh();
+        }, LOVE_AFTER_MS);
+      }
+      refresh();
+    },
+    [refresh, touch],
+  );
 
   const onPointerLeave = useCallback(() => {
     hovering.current = false;
+    window.clearTimeout(loveTimer.current);
+    if (loved.current) {
+      loveTimer.current = window.setTimeout(() => {
+        loved.current = false;
+        refresh();
+      }, LOVE_LINGER_MS);
+    }
     refresh();
   }, [refresh]);
+
+  useEffect(() => () => window.clearTimeout(loveTimer.current), []);
 
   return { mood, onClick, onPointerEnter, onPointerLeave };
 }
 
 if (import.meta.env.DEV) {
-  // Test hook for scripts/cdp.py: window.__nimi.setMood('happy', 3000)
+  // Test hooks for scripts/cdp.py: window.__nimi.setMood('happy', 3000) · window.__nimi.pause(true)
   (window as unknown as { __nimi: object }).__nimi = {
     setMood: (mood: Mood | null, ttl?: number) => setMoodOverride(mood, ttl),
+    pause: (paused: boolean) => setNimiPaused(paused),
   };
 }

@@ -21,6 +21,7 @@ export const listMonitors = () => invoke<MonitorInfo[]>("list_monitors");
 // Overlay window
 export const setHitRects = (rects: HitRect[]) => invoke<void>("set_hit_rects", { rects });
 export const getOverlayVisibility = () => invoke<OverlayVisibility>("get_overlay_visibility");
+export const getOverlayCovered = () => invoke<boolean>("get_overlay_covered");
 export const hideOverlayFor = (seconds: number) => invoke<void>("hide_overlay_for", { seconds });
 export const showOverlay = () => invoke<void>("show_overlay");
 export const startOverlayDrag = () => invoke<void>("start_overlay_drag");

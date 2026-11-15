@@ -11,16 +11,24 @@ import type { HitRect } from "@/ipc/generated/HitRect";
 const tracked = new Map<string, Element>();
 let frame = 0;
 
+/** The element's box clipped to the window: a capsule slid up off the top edge (peek mode)
+ *  only reports its visible strip, and nothing outside the window can catch the mouse. */
 function measure(el: Element): HitRect {
   const r = el.getBoundingClientRect();
-  return { x: r.left, y: r.top, w: r.width, h: r.height };
+  const x = Math.max(0, r.left);
+  const y = Math.max(0, r.top);
+  const right = Math.min(window.innerWidth, r.right);
+  const bottom = Math.min(window.innerHeight, r.bottom);
+  return { x, y, w: Math.max(0, right - x), h: Math.max(0, bottom - y) };
 }
 
 function flush() {
   frame = 0;
   const rects: HitRect[] = [];
   for (const el of tracked.values()) {
-    if (el.isConnected) rects.push(measure(el));
+    if (!el.isConnected) continue;
+    const rect = measure(el);
+    if (rect.w > 0 && rect.h > 0) rects.push(rect);
   }
   void setHitRects(rects);
 }

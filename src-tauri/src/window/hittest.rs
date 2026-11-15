@@ -27,6 +27,8 @@ use crate::ipc::{events, CursorProximity, DragPhase, HitRect, OverlayDragEvent};
 const CLICK_SLACK: f64 = 6.0;
 /// Within this distance the loop polls fast and the character can react to the cursor.
 const NEAR_ZONE: f64 = 160.0;
+/// A peeking capsule slides down when the cursor comes this close (REFINEMENTS.md §1).
+const REVEAL_ZONE: f64 = 60.0;
 /// With the primary button held (a possible file drag), enable input this far out so the
 /// OLE drop target is active before the cursor reaches the capsule.
 const HUNGRY_ZONE: f64 = 120.0;
@@ -164,6 +166,7 @@ fn run(app: AppHandle) {
     let st = state(&app);
     let mut last_near = false;
     let mut last_inside = false;
+    let mut last_reveal = false;
     let mut last_down = false;
     let mut pressed_inside = false;
 
@@ -204,6 +207,7 @@ fn run(app: AppHandle) {
         let inside = rects.iter().any(|r| r.contains(x, y, CLICK_SLACK * scale));
         let near = rects.iter().any(|r| r.contains(x, y, NEAR_ZONE * scale));
         let hungry = down && rects.iter().any(|r| r.contains(x, y, HUNGRY_ZONE * scale));
+        let reveal = hungry || rects.iter().any(|r| r.contains(x, y, REVEAL_ZONE * scale));
 
         if down && !last_down {
             pressed_inside = inside;
@@ -213,10 +217,18 @@ fn run(app: AppHandle) {
 
         set_interactive(&app, &st, inside || hungry || pressed_inside);
 
-        if near != last_near || inside != last_inside {
-            let _ = app.emit(events::OVERLAY_CURSOR, CursorProximity { near, inside });
+        if near != last_near || inside != last_inside || reveal != last_reveal {
+            let _ = app.emit(
+                events::OVERLAY_CURSOR,
+                CursorProximity {
+                    near,
+                    inside,
+                    reveal,
+                },
+            );
             last_near = near;
             last_inside = inside;
+            last_reveal = reveal;
         }
 
         let expanded = st.expanded.load(Ordering::Relaxed);

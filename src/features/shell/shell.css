@@ -25,6 +25,111 @@
   transform: scale(0.985);
 }
 
+/* The glass is its own layer so «نيمي بس» can fade it out. The shell keeps a transparent 1 px
+   border so content sits exactly where it did when the shell itself carried .n-glass.
+   `translate` on .shell makes a stacking context, so z-index -1 stays under the content. */
+.shell {
+  border: 1px solid transparent;
+}
+
+.shell__glass {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity var(--n-dur-expand) var(--n-ease-out);
+}
+
+/* «نيمي بس»: no glass; the shell (and so the hit rect) shrinks to NIMI's frame, centered where
+   he sits in the capsule: capsule-top + 22·s is his center, the frame is 78·s square. */
+.shell--nimiOnly {
+  top: calc(var(--capsule-top) - 17px * var(--nimi-scale));
+  width: calc(78px * var(--nimi-scale));
+  height: calc(78px * var(--nimi-scale));
+  border-radius: 50%;
+}
+
+.shell--nimiOnly .shell__glass {
+  opacity: 0;
+}
+
+.shell--nimiOnly .shell__nimi {
+  margin-top: 0;
+}
+
+.shell--nimiOnly.shell--winter::before {
+  opacity: 0;
+}
+
+/* «يطل» peek mode (REFINEMENTS.md §1, board_refinements.png panel 1-②): over a maximized window
+   the capsule slides up until only its bottom 12 px show, and NIMI drops a little inside it so
+   his eyes peek out right under that strip. Spring, ~280 ms. Only the strip takes the mouse. */
+.shell {
+  transition:
+    width var(--n-dur-expand) var(--n-ease-spring),
+    height var(--n-dur-expand) var(--n-ease-spring),
+    top var(--n-dur-expand) var(--n-ease-spring),
+    border-radius var(--n-dur-expand) var(--n-ease-out),
+    transform var(--n-dur-press) var(--n-ease-out),
+    translate 280ms var(--n-ease-spring);
+}
+
+/* capsule bottom (capsule-top + 52·s) → 12 px */
+.shell--peek {
+  translate: -50% calc(12px - var(--capsule-top) - 52px * var(--nimi-scale));
+}
+
+/* NIMI only: no capsule, so his eyes (43.5·s below his frame top) land at 14 px. */
+.shell--peek.shell--nimiOnly {
+  translate: -50% calc(14px - var(--capsule-top) - 26.5px * var(--nimi-scale));
+}
+
+/* In the capsule his eyes sit 26.5·s below the capsule top; after the slide they would be
+   12 − 25.5·s, so drop him by 2 + 25.5·s to bring them to 14 px. */
+.shell__nimi {
+  transition:
+    top var(--n-dur-expand) var(--n-ease-spring),
+    margin-top var(--n-dur-expand) var(--n-ease-spring),
+    translate 280ms var(--n-ease-spring);
+}
+
+.shell--peek.shell--nimiInCapsule .shell__nimi {
+  translate: -50% calc(-50% + 2px + 25.5px * var(--nimi-scale));
+}
+
+/* The strip that stays: the only mouse target while peeking (the hit-test loop also measures
+   the 60 px "come down" zone from it). Invisible; the capsule's own edge is what you see. */
+.peek-strip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: calc(148px * var(--nimi-scale));
+  height: 12px;
+  pointer-events: none;
+}
+
+.peek-strip--nimiOnly {
+  width: calc(78px * var(--nimi-scale));
+}
+
+/* «الكبسولة بس» / leaving the panel: NIMI fades before he is unmounted. */
+.shell__nimi {
+  animation: shell-nimi-in 200ms var(--n-ease-out) 1;
+}
+
+.shell__nimi.is-leaving {
+  opacity: 0;
+  transition: opacity 200ms var(--n-ease-out);
+}
+
+@keyframes shell-nimi-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .shell--panel {
   top: var(--panel-top);
   width: 880px;
@@ -78,6 +183,7 @@
   mask: linear-gradient(#000, #000) top / 100% 55% no-repeat;
   opacity: 0.95;
   pointer-events: none;
+  transition: opacity var(--n-dur-expand) var(--n-ease-out);
 }
 
 .shell--panel.shell--winter::before {

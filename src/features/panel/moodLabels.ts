@@ -20,6 +20,13 @@ const AR: Record<Mood, string> = {
   hungry: "جوعان",
   chomp: "ياكل",
   chew: "يمضغ",
+  love: "يحبّك",
+  laugh: "يضحك",
+  sad: "زعلان",
+  angry: "معصّب",
+  scared: "خايف",
+  celebrate: "يحتفل",
+  cold: "بردان",
 };
 
 const EN: Record<Mood, string> = {
@@ -40,6 +47,13 @@ const EN: Record<Mood, string> = {
   hungry: "hungry",
   chomp: "eating",
   chew: "chewing",
+  love: "in love",
+  laugh: "laughing",
+  sad: "sad",
+  angry: "angry",
+  scared: "scared",
+  celebrate: "celebrating",
+  cold: "cold",
 };
 
 export function moodLabel(mood: Mood, lang: Lang): string {
@@ -53,6 +67,9 @@ export function moodLevel(mood: Mood): number {
     case "happy":
     case "chomp":
     case "chew":
+    case "love":
+    case "laugh":
+    case "celebrate":
       return 1;
     case "music":
     case "curious":
@@ -69,8 +86,13 @@ export function moodLevel(mood: Mood): number {
       return 0.55;
     case "dizzy":
     case "bored":
+    case "cold":
       return 0.4;
+    case "sad":
+    case "scared":
+      return 0.3;
     case "error":
+    case "angry":
       return 0.25;
   }
 }

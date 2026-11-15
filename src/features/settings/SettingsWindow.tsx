@@ -5,7 +5,9 @@ import { Icon, type IconName } from "@/components/Icon";
 import { Segmented, Slider, Toggle } from "@/components/controls";
 import { useT, type TKey } from "@/i18n";
 import { listMonitors } from "@/ipc/commands";
+import type { CapsuleStyle } from "@/ipc/generated/CapsuleStyle";
 import type { MonitorInfo } from "@/ipc/generated/MonitorInfo";
+import type { Settings } from "@/ipc/generated/Settings";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
 import { DropDiagnostics } from "@/features/overlay/DropDiagnostics";
@@ -13,12 +15,12 @@ import { Nimi } from "@/features/character/Nimi";
 import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import "./settings.css";
 
-type SectionId = "general" | "character";
+type SectionId = "general" | "character" | "capsule";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
   { id: "character", icon: "star4", label: "settings.section.character", ready: true },
-  { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: false },
+  { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: true },
   { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: false },
   { id: "feed", icon: "pocket", label: "settings.section.feed", ready: false },
   { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: false },
@@ -26,6 +28,31 @@ const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: 
   { id: "privacy", icon: "shield", label: "settings.section.privacy", ready: false },
   { id: "about", icon: "info", label: "settings.section.about", ready: false },
 ];
+
+/** Live preview of the compact state: the capsule as it looks with the current settings. */
+function CapsulePreview({ settings, capsuleStyle, caption }: { settings: Settings; capsuleStyle: CapsuleStyle; caption: string }) {
+  const glass = capsuleStyle !== "nimiOnly";
+  return (
+    <div className="preview">
+      <div
+        className={"preview__capsule preview__capsule--" + capsuleStyle + (glass ? " n-glass" : "")}
+        style={{ "--nimi-scale": settings.nimiSize / DEFAULT_NIMI_SIZE } as CSSProperties}
+      >
+        {capsuleStyle !== "capsuleOnly" && (
+          <Nimi
+            className="capsule__nimi"
+            mood="idle"
+            size={settings.nimiSize}
+            winter={isWinter(settings)}
+            reducedMotion={settings.reduceMotion}
+            nuriPace={nuriPace(settings.nuriActivity)}
+          />
+        )}
+      </div>
+      <div className="preview__caption">{caption}</div>
+    </div>
+  );
+}
 
 function Row({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
   return (
@@ -71,7 +98,7 @@ export function SettingsWindow() {
     })),
   ];
 
-  const sectionTitle = section === "general" ? t("settings.section.general") : t("settings.section.character");
+  const sectionTitle = t(SECTIONS.find((s) => s.id === section)?.label ?? "settings.section.general");
 
   return (
     <div className="settings-window">
@@ -150,22 +177,8 @@ export function SettingsWindow() {
 
           {section === "character" && (
             <section className="settings__content">
-              <div className="preview">
-                <div
-                  className="preview__capsule n-glass"
-                  style={{ "--nimi-scale": settings.nimiSize / DEFAULT_NIMI_SIZE } as CSSProperties}
-                >
-                  <Nimi
-                    className="capsule__nimi"
-                    mood="idle"
-                    size={settings.nimiSize}
-                    winter={isWinter(settings)}
-                    reducedMotion={settings.reduceMotion}
-                    nuriPace={nuriPace(settings.nuriActivity)}
-                  />
-                </div>
-                <div className="preview__caption">{t("settings.preview")}</div>
-              </div>
+              {/* NIMI's own settings are previewed in the capsule, whatever the capsule style. */}
+              <CapsulePreview settings={settings} capsuleStyle="nimiInCapsule" caption={t("settings.preview")} />
               <Row title={t("settings.size")} sub={t("settings.size.sub")}>
                 <Slider
                   label={t("settings.size")}
@@ -204,6 +217,27 @@ export function SettingsWindow() {
               </Row>
               <Row title={t("settings.reduceMotion")} sub={t("settings.reduceMotion.sub")}>
                 <Toggle label={t("settings.reduceMotion")} checked={settings.reduceMotion} onChange={(reduceMotion) => void updateSettings({ reduceMotion })} />
+              </Row>
+            </section>
+          )}
+
+          {section === "capsule" && (
+            <section className="settings__content">
+              <CapsulePreview settings={settings} capsuleStyle={settings.capsuleStyle} caption={t("settings.preview")} />
+              <Row title={t("settings.capsuleStyle")} sub={t("settings.capsuleStyle.sub")}>
+                <Segmented
+                  label={t("settings.capsuleStyle")}
+                  value={settings.capsuleStyle}
+                  options={[
+                    { value: "nimiInCapsule", label: t("settings.capsuleStyle.nimiInCapsule") },
+                    { value: "capsuleOnly", label: t("settings.capsuleStyle.capsuleOnly") },
+                    { value: "nimiOnly", label: t("settings.capsuleStyle.nimiOnly") },
+                  ]}
+                  onChange={(capsuleStyle) => void updateSettings({ capsuleStyle })}
+                />
+              </Row>
+              <Row title={t("settings.peek")} sub={t("settings.peek.sub")}>
+                <Toggle label={t("settings.peek")} checked={settings.peekOverMaximized} onChange={(peekOverMaximized) => void updateSettings({ peekOverMaximized })} />
               </Row>
             </section>
           )}

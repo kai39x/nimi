@@ -170,6 +170,42 @@ MOTION = {
         sq=k((0, S(1.035, .965), IO), (50, S(.985, 1.02), IO), (100, S(1.035, .965))),
         face=k((0, T(0, 1), IO), (50, T(0, -1), IO), (100, T(0, 1))),
     )),
+    "love": dict(D=2.6, layers=dict(
+        lift=k((0, T(), IO), (50, T(0, -6), IO), (100, T())),
+        sq=k((0, S(1.02, .98) + " rotate(-2deg)", IO), (50, S(.99, 1.02) + " rotate(2deg)", IO), (100, S(1.02, .98) + " rotate(-2deg)")),
+        face=k((0, T(0, 1), IO), (50, T(0, -1), IO), (100, T(0, 1))),
+    )),
+    "laugh": dict(D=.5, layers=dict(
+        lift=k((0, T(), EO), (40, T(0, -7), EI), (80, T()), (100, T())),
+        sq=k((0, S(1.06, .94)), (40, S(.96, 1.05)), (80, S(1.06, .94)), (100, S(1.06, .94))),
+        face=k((0, T(0, 1)), (40, T(0, -1.5)), (100, T(0, 1))),
+    )),
+    "sad": dict(D=4.6, layers=dict(
+        sq=k((0, S(1.04, .94) + " rotate(-2deg)", IO), (50, S(1.03, .955) + " rotate(-0.5deg)", IO), (100, S(1.04, .94) + " rotate(-2deg)")),
+        face=k((0, T(0, 3), IO), (50, T(-1, 3.5), IO), (100, T(0, 3))),
+        moon=k((0, T(), IO), (50, T(-1, 1), IO), (100, T())),
+    )),
+    "angry": dict(D=1.6, layers=dict(
+        lift=k((0, T()), (3, T(-2, 0)), (6, T(2, 0)), (9, T(-2, 0)), (12, T(2, 0)), (15, T(-1, 0)), (18, T()), (100, T())),
+        sq=k((0, S(1.05, .95)), (8, S(1.08, .93)), (20, S(1.05, .95)), (100, S(1.05, .95))),
+        face=k((0, T(0, 1)), (100, T(0, 1))),
+    )),
+    "scared": dict(D=.22, layers=dict(
+        lift=k((0, T(-1.3, 0)), (50, T(1.3, 0)), (100, T(-1.3, 0))),
+        sq=k((0, S(.94)), (100, S(.94))),
+    )),
+    "celebrate": dict(D=1.8, layers=dict(
+        lift=k((0, T()), (8, T(), EO), (25, T(0, -30) + " rotate(-8deg)", EI), (42, T()), (50, T(), EO),
+               (67, T(0, -30) + " rotate(8deg)", EI), (84, T()), (100, T())),
+        sq=k((0, S()), (5, S(1.12, .86)), (11, S(.9, 1.12)), (25, S(.98, 1.02)), (38, S(.94, 1.07)), (43, S(1.14, .85)),
+             (47, S(1.1, .88)), (53, S(.9, 1.12)), (67, S(.98, 1.02)), (80, S(.94, 1.07)), (85, S(1.14, .85)), (92, S(.98, 1.02)), (100, S())),
+        sh=k((0, S()), (8, S(), EO), (25, S(.6), EI), (42, S(1.08)), (50, S(), EO), (67, S(.6), EI), (84, S(1.08)), (92, S()), (100, S())),
+    )),
+    "cold": dict(D=.16, layers=dict(
+        lift=k((0, T(-.8, 0)), (50, T(.8, 0)), (100, T(-.8, 0))),
+        sq=k((0, S(.97, .98)), (100, S(.97, .98))),
+        moon=k((0, T(-.6, 0)), (50, T(.6, 0)), (100, T(-.6, 0))),
+    )),
     "shy": dict(D=3.6, layers=dict(
         sq=k((0, S(.97) + " rotate(-3deg)", IO), (30, S(.93, .95) + " rotate(-6deg)", IO), (60, S(.94, .955) + " rotate(-5deg)", IO),
              (100, S(.97) + " rotate(-3deg)")),
@@ -286,6 +322,12 @@ def moon_art(face="open", r=13, tint=None):
         o.append(f'<circle cx="{-3.5*s}" cy="{-.5*s}" r="{1.8*s}" fill="{INK}"/><circle cx="{3.5*s}" cy="{-.5*s}" r="{1.8*s}" fill="{INK}"/>')
     elif face == "wow":
         o.append(f'<circle cx="{-3.5*s}" cy="{-1.5*s}" r="{2*s}" fill="{INK}"/><circle cx="{3.5*s}" cy="{-1.5*s}" r="{2*s}" fill="{INK}"/><ellipse cx="0" cy="{4*s}" rx="{1.6*s}" ry="{2*s}" fill="{INK}"/>')
+    elif face == "love":
+        for hx in (-3.8 * s, 3.8 * s):
+            o.append(f'<path d="M{hx:.1f} {2.2*s:.1f} c{-3*s:.1f} {-2*s:.1f} {-2.6*s:.1f} {-5*s:.1f} 0 {-3.4*s:.1f} c{2.6*s:.1f} {-1.6*s:.1f} {3*s:.1f} {1.4*s:.1f} 0 {3.4*s:.1f}z" fill="#FF7F9E"/>')
+    elif face == "sad":
+        o.append(f'<path d="M{-6*s} {-0.5*s} q{2.5*s} {-2*s} {5*s} 0 M{1*s} {-0.5*s} q{2.5*s} {-2*s} {5*s} 0" stroke="{INK}" stroke-width="{w}" fill="none" stroke-linecap="round"/>'
+                 f'<path d="M{-2.5*s} {5*s} q{2.5*s} {-2*s} {5*s} 0" stroke="{INK}" stroke-width="{1.5*s}" fill="none" stroke-linecap="round"/>')
     elif face == "worried":
         o.append(f'<circle cx="{-3.5*s}" cy="{-1*s}" r="{1.7*s}" fill="{INK}"/><circle cx="{3.5*s}" cy="{-1*s}" r="{1.7*s}" fill="{INK}"/>'
                  f'<path d="M{-4*s} {5*s} q{2*s} {-2*s} {4*s} 0 t{4*s} 0" stroke="{INK}" stroke-width="{1.5*s}" fill="none" stroke-linecap="round"/>')
@@ -452,6 +494,51 @@ def eyes(kind, rig):
                  f"a6 6 0 1 1 -12 0 a7.5 7.5 0 1 1 15 0")
             o.append(f'<g{rig.c("spin")}><path d="{d}" fill="none" stroke="{INK}" stroke-width="2.6" stroke-linecap="round"/></g>')
         return "".join(o), False
+    if kind == "heart":
+        for x in (L, R):
+            y = EY
+            o.append(f'<path d="M{x} {y+10} C{x-14} {y+1} {x-9} {y-12} {x} {y-4.5} C{x+9} {y-12} {x+14} {y+1} {x} {y+10} Z" fill="#FF7F9E"/>'
+                     f'<ellipse cx="{x-4.5}" cy="{y-3}" rx="2.6" ry="1.8" transform="rotate(-30 {x-4.5} {y-3})" fill="#fff" opacity=".9"/>')
+        return "".join(o), False
+    if kind == "laugh":
+        for x, side in ((L, -1), (R, 1)):
+            o.append(f'<path d="M{x-9} {EY+3} Q{x} {EY-11} {x+9} {EY+3}" fill="none" stroke="{INK}" stroke-width="4.6" stroke-linecap="round"/>'
+                     f'<path d="M{x+side*12} {EY+3} q{side*3} {5} 0 {7.5} q{-side*3} {-2.5} 0 {-7.5}z" fill="#A9E4FF"/>')
+        return "".join(o), False
+    if kind == "sad":
+        for x, side in ((L, -1), (R, 1)):
+            o.append(f'<ellipse cx="{x}" cy="{EY+2}" rx="8.5" ry="10.5" fill="{INK}"/>'
+                     f'<path d="M{x-12} {EY-14} L{x+12} {EY-14} L{x+12} {EY+(0 if side < 0 else -7)} L{x-12} {EY+(-7 if side < 0 else 0)} Z" fill="{BODY}"/>'
+                     f'<circle cx="{x-2.5}" cy="{EY+3}" r="2.4" fill="#fff"/>')
+        o.append(f'<path d="M{L-9} {EY-12} L{L+6} {EY-18}" stroke="{INK}" stroke-width="3" stroke-linecap="round" opacity=".7"/>'
+                 f'<path d="M{R+9} {EY-12} L{R-6} {EY-18}" stroke="{INK}" stroke-width="3" stroke-linecap="round" opacity=".7"/>'
+                 f'<path d="M{R+10} {EY+15} Q{R+15} {EY+23} {R+10} {EY+27} Q{R+5} {EY+23} {R+10} {EY+15} Z" fill="#A9E4FF" stroke="#7FCFF2" stroke-width="1"/>')
+        return "".join(o), True
+    if kind == "angry":
+        for x, side in ((L, -1), (R, 1)):
+            o.append(f'<ellipse cx="{x}" cy="{EY+2}" rx="8.5" ry="10" fill="{INK}"/>'
+                     f'<path d="M{x-12} {EY-14} L{x+12} {EY-14} L{x+12} {EY+(-1 if side < 0 else -8)} L{x-12} {EY+(-8 if side < 0 else -1)} Z" fill="{BODY}"/>'
+                     f'<circle cx="{x-2}" cy="{EY+3.5}" r="2.2" fill="#fff"/>')
+        o.append(f'<path d="M{L-11} {EY-17} L{L+8} {EY-10}" stroke="{INK}" stroke-width="3.8" stroke-linecap="round"/>'
+                 f'<path d="M{R+11} {EY-17} L{R-8} {EY-10}" stroke="{INK}" stroke-width="3.8" stroke-linecap="round"/>')
+        return "".join(o), True
+    if kind == "scared":
+        for x in (L, R):
+            o.append(f'<ellipse cx="{x}" cy="{EY-1}" rx="10.5" ry="13" fill="#fff" stroke="{INK}" stroke-width="2.4"/>'
+                     f'<circle cx="{x+(1.5 if x == L else -1.5)}" cy="{EY+1}" r="3.2" fill="{INK}"/>'
+                     f'<path d="M{x-9} {EY-20} Q{x} {EY-25} {x+9} {EY-20}" stroke="{INK}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/>')
+        return "".join(o), True
+    if kind == "cold":
+        for x in (L, R):
+            o.append(f'<ellipse cx="{x}" cy="{EY+2}" rx="8.5" ry="10" fill="{INK}"/>'
+                     f'<rect x="{x-11}" y="{EY-12}" width="22" height="10.5" fill="{BODY}"/>'
+                     f'<path d="M{x-9} {EY-1.5} Q{x} {EY+0.5} {x+9} {EY-1.5}" stroke="{INK}" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
+                     f'<circle cx="{x-2}" cy="{EY+4}" r="2" fill="#fff"/>')
+        return "".join(o), True
+    if kind == "squint":
+        for x in (L, R):
+            o.append(f'<path d="M{x-9} {EY+1} Q{x} {EY-3} {x+9} {EY+1}" fill="none" stroke="{INK}" stroke-width="4" stroke-linecap="round"/>')
+        return "".join(o), False
     if kind == "shy":
         for x in (L, R):
             o.append(f'<ellipse cx="{x-3}" cy="{EY+4}" rx="6.5" ry="8" fill="{INK}"/><circle cx="{x-5}" cy="{EY+1.5}" r="2.2" fill="#fff"/>')
@@ -484,6 +571,11 @@ def mouth(kind, rig=None):
         "flat": f'<path d="M{x-4} {y+2} L{x+7} {y+1}" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>',
         "grab": f'<ellipse cx="{x}" cy="{y+2}" rx="4" ry="5" fill="{MOUTH}"/>',
         "shy": f'<path d="M{x-6} {y+3} q2 -2 4 0 t4 0" fill="none" stroke="{INK}" stroke-width="2.6" stroke-linecap="round"/>',
+        "frown": f'<path d="M{x-7} {y+5} Q{x} {y-2} {x+7} {y+5}" fill="none" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>',
+        "pout": f'<path d="M{x-5} {y+4} Q{x} {y-1} {x+5} {y+4}" fill="none" stroke="{INK}" stroke-width="3.2" stroke-linecap="round"/>',
+        "chatter": (f'<rect x="{x-8}" y="{y-2}" width="16" height="9" rx="3.5" fill="#fff" stroke="{INK}" stroke-width="2.2"/>'
+                    f'<path d="M{x-3} {y-1} v7 M{x+2.5} {y-1} v7 M{x-8} {y+2.5} h16" stroke="{INK}" stroke-width="1.4"/>'),
+        "yawn": f'<ellipse cx="{x}" cy="{y+4}" rx="7.5" ry="10.5" fill="{MOUTH}"/><ellipse cx="{x}" cy="{y+10}" rx="4.5" ry="3" fill="{TONGUE}"/>',
         "wide": f'<ellipse cx="{x}" cy="{y+3}" rx="11" ry="12" fill="{MOUTH}"/><ellipse cx="{x}" cy="{y+10}" rx="6.5" ry="3.6" fill="{TONGUE}"/>',
         "puff": (f'<circle cx="38" cy="160" r="17" fill="{BODY}"/><circle cx="162" cy="160" r="17" fill="{BODY}"/>'
                  f'<ellipse cx="42" cy="163" rx="9" ry="5" fill="{ROSE}" opacity=".85"/><ellipse cx="158" cy="163" rx="9" ry="5" fill="{ROSE}" opacity=".85"/>'
@@ -493,9 +585,10 @@ def mouth(kind, rig=None):
 
 
 def blush(level):
-    op = {"soft": ".5", "warm": ".8", "faint": ".3", "hot": ".95"}[level]
-    o = (f'<ellipse cx="{L-14}" cy="{EY+13}" rx="8.5" ry="4.8" fill="{ROSE}" opacity="{op}"/>'
-         f'<ellipse cx="{R+14}" cy="{EY+13}" rx="8.5" ry="4.8" fill="{ROSE}" opacity="{op}"/>')
+    op = {"soft": ".5", "warm": ".8", "faint": ".3", "hot": ".95", "cold": ".75", "angry": ".95"}[level]
+    col = {"cold": "#A9E4FF", "angry": "#FF8A8A"}.get(level, ROSE)
+    o = (f'<ellipse cx="{L-14}" cy="{EY+13}" rx="8.5" ry="4.8" fill="{col}" opacity="{op}"/>'
+         f'<ellipse cx="{R+14}" cy="{EY+13}" rx="8.5" ry="4.8" fill="{col}" opacity="{op}"/>')
     if level == "hot":
         for bx in (L - 14, R + 14):
             o += (f'<path d="M{bx-5} {EY+16} l3 -5 M{bx} {EY+16} l3 -5 M{bx+5} {EY+16} l3 -5" '
@@ -526,6 +619,13 @@ MOODS = {
     "hungry": dict(e="sparkle", m="wide", b="warm", moon=("static", "wow", 188, 98, "front"), o="loose"),
     "chomp": dict(e="happy", m="puff", b="warm", moon=("orbit", "wow", 3, .15), o="normal"),
     "chew": dict(e="music", m="munch", b="warm", moon=("orbit", "happy", 1.5, .1), o="normal"),
+    "love": dict(e="heart", m="smile", b="hot", moon=("orbit", "love", 6, .12), o="normal"),
+    "laugh": dict(e="laugh", m="big", b="warm", moon=("orbit", "happy", 2.6, .1), o="normal"),
+    "sad": dict(e="sad", m="frown", b="faint", moon=("static", "sad", 166, 160, "front"), o="faint"),
+    "angry": dict(e="angry", m="pout", b="angry", moon=("static", "worried", 150, 90, "back"), o="normal"),
+    "scared": dict(e="scared", m="wavy", b="faint", moon=("static", "wow", 52, 92, "back"), o="loose"),
+    "celebrate": dict(e="sparkle", m="big", b="warm", moon=("orbit", "happy", 2.0, .1), o="normal"),
+    "cold": dict(e="cold", m="chatter", b="cold", moon=("static", "worried", 168, 168, "front"), o="faint"),
 }
 
 
@@ -563,12 +663,84 @@ def beanie(rig):
     return dome + shade + stripe + cuff + ribs + pom
 
 
+def body_layers(gid, small=False):
+    """Body with soft volume: gradient fill, core shadow, rim light, gloss, belly."""
+    rim = "" if small else '<path d="M134 82 C154 94 164 114 166 138" fill="none" stroke="#EEF1FF" stroke-width="3" stroke-linecap="round" opacity=".35"/>'
+    return (f'<path d="{BODY_D}" fill="url(#{gid}b)"/>'
+            f'<path d="M36 166 C46 196 154 196 164 166 C158 194 136 204 100 204 C64 204 42 194 36 166 Z" fill="#8F9DEC" opacity=".35"/>'
+            + rim +
+            '<ellipse cx="74" cy="104" rx="11" ry="16" transform="rotate(38 74 104)" fill="#fff" opacity=".42"/>'
+            '<circle cx="86" cy="88" r="3.2" fill="#fff" opacity=".5"/>'
+            f'<ellipse cx="100" cy="180" rx="38" ry="18" fill="{MIST}" opacity=".66"/>')
+
+
 def static_moon(rig, face, x, y, tint=None, halo=False):
     h = glow(22, rig.gid, rig.anim) if halo else ""
     return f'<g transform="translate({x} {y})"><g{rig.c("L-moon")}>{h}<g{rig.c("L-roll")}>{moon_art(face, 13, tint)}</g></g></g>'
 
 
-def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=None, belly=False, winter=False):
+def extras(mood, rig, anim=True):
+    """Floating extras per mood (z's, notes, hearts, steam, confetti...)."""
+    o = []
+    if mood == "sleeping":
+        for (x, y, fs, dl, op) in ((140, 74, 20, 0, 1), (154, 60, 15, -1, .8), (166, 48, 11, -2, .6)):
+            o.append(f'<text{rig.c("zfloat")}{rig.st(f"animation-delay:{dl}s")} x="{x}" y="{y}" font-family="Rubik, sans-serif" '
+                     f'font-weight="700" font-size="{fs}" fill="{MIST}" opacity="{op}">z</text>')
+    if mood == "curious":
+        o.append(f'<g transform="translate(152 66)"><g{rig.c("L-x1")}><text x="-6" y="8" font-family="Rubik, sans-serif" font-weight="700" font-size="24" fill="{MOON}">?</text></g></g>')
+    if mood == "surprised":
+        o.append(f'<g{rig.c("L-x1")}><path d="M70 62 L64 52 M100 56 L100 44 M130 62 L136 52" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>')
+    if mood == "excited":
+        for (sx, sy, ss, dl) in ((26, 82, 6, 0), (178, 74, 5, -.5), (186, 176, 4, -1), (18, 160, 3.5, -.8), (100, 52, 4, -.3)):
+            o.append(star(sx, sy, ss, "#fff", "twinkle" if anim else "", f"animation-delay:{dl}s" if anim else ""))
+    if mood == "working":
+        for i, dx in enumerate((0, 10, 20)):
+            o.append(f'<circle{rig.c("dot")}{rig.st(f"animation-delay:{i*0.18:.2f}s")} cx="{136+dx}" cy="66" r="3.2" fill="{MIST}"/>')
+    if mood == "error":
+        o.append(f'<g transform="translate(160 80)"><g{rig.c("L-x1")}><circle r="11" fill="{CORAL}"/><rect x="-1.6" y="-7.5" width="3.2" height="9" rx="1.6" fill="#fff"/><circle cy="6" r="1.8" fill="#fff"/></g></g>')
+        o.append(f'<g{rig.c("L-x2")}><path d="M52 98 Q58 108 52 113 Q46 108 52 98 Z" fill="#A9E4FF"/></g>')
+    if mood == "music":
+        o.append(note(150, 76, MOON, rig, 0))
+        o.append(note(36, 92, ROSE, rig, -1.2))
+        o.append(note(168, 112, ROSE, rig, -.6))
+    if mood == "bored":
+        o.append(f'<g{rig.c("L-x1")}><circle cx="114" cy="164" r="3" fill="{MIST}" opacity=".7"/><circle cx="122" cy="161" r="4.5" fill="{MIST}" opacity=".5"/></g>')
+    if mood == "dizzy":
+        st_ = "".join(star(30 * math.cos(a), 30 * math.sin(a), 5, MOON) for a in (0, math.pi/2, math.pi, 3*math.pi/2))
+        o.append(f'<g transform="translate(100 62) scale(1 .32)"><g{rig.c("spin")}>{st_}</g></g>')
+    if mood == "grabbed":
+        o.append(f'<path d="M100 72 L100 30" stroke="{MIST}" stroke-width="2" stroke-dasharray="3 5" opacity=".5"/>')
+    if mood == "love":
+        for (x, y, c, dl) in ((36, 104, "#FF7F9E", 0), (164, 92, ROSE, -1), (152, 128, "#FF7F9E", -1.7)):
+            o.append(f'<g{rig.c("note")}{rig.st(f"animation-delay:{dl}s;animation-duration:2.8s")}><path d="M{x} {y+7} C{x-10} {y} {x-6} {y-8} {x} {y-3} C{x+6} {y-8} {x+10} {y} {x} {y+7} Z" fill="{c}"/></g>')
+    if mood == "laugh":
+        for side in (-1, 1):
+            x0 = 100 + side * 82
+            o.append(f'<g{rig.c("twinkle")}{rig.st(f"animation-duration:.5s;animation-delay:{-.25 if side > 0 else 0}s")}><path d="M{x0} 120 q{side*8} 12 0 24 M{x0+side*9} 116 q{side*9} 16 0 32" stroke="{MIST}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/></g>')
+    if mood == "angry":
+        for (x, dl) in ((60, 0), (140, -1.2)):
+            o.append(f'<g{rig.c("zfloat")}{rig.st(f"animation-delay:{dl}s;animation-duration:2.4s")}><circle cx="{x}" cy="70" r="6" fill="{MIST}" opacity=".85"/><circle cx="{x+7}" cy="64" r="4.5" fill="{MIST}" opacity=".7"/><circle cx="{x-6}" cy="64" r="4" fill="{MIST}" opacity=".6"/></g>')
+        o.append(f'<path d="M150 98 l6 -6 m-6 0 l6 6 M160 104 l5 -5" stroke="#FF8A8A" stroke-width="2.6" stroke-linecap="round"/>')
+    if mood == "scared":
+        o.append(f'<path d="M148 96 Q154 106 148 111 Q142 106 148 96 Z" fill="#A9E4FF"/><path d="M52 104 Q57 112 52 116 Q47 112 52 104 Z" fill="#A9E4FF" opacity=".8"/>')
+        for side in (-1, 1):
+            x0 = 100 + side * 80
+            o.append(f'<path d="M{x0} 128 l{side*6} -4 M{x0} 140 l{side*8} 0 M{x0} 152 l{side*6} 4" stroke="{MIST}" stroke-width="2.2" stroke-linecap="round" opacity=".6"/>')
+    if mood == "celebrate":
+        conf = ((28, 70, "#FFE7A0", 0), (60, 46, "#FFB6C9", -.3), (140, 44, "#9FF0D0", -.6), (174, 70, "#B4C0FF", -.2), (16, 128, "#FFB6C9", -.8),
+                (186, 130, "#FFE7A0", -.5), (100, 34, "#FFFFFF", -.4), (44, 172, "#9FF0D0", -.7), (162, 176, "#FFB6C9", -.1))
+        for i, (x, y, c, dl) in enumerate(conf):
+            shape = (f'<rect x="{x-3}" y="{y-5}" width="6" height="10" rx="2" fill="{c}" transform="rotate({(i*37)%90-45} {x} {y})"/>' if i % 2
+                     else f'<circle cx="{x}" cy="{y}" r="3.6" fill="{c}"/>')
+            o.append(f'<g{rig.c("twinkle")}{rig.st(f"animation-delay:{dl}s;animation-duration:1.2s")}>{shape}</g>')
+    if mood == "cold":
+        o.append(f'<g{rig.c("sigh")}{rig.st("animation-duration:2.6s")}><circle cx="116" cy="166" r="4" fill="{MIST}" opacity=".75"/><circle cx="126" cy="162" r="5.5" fill="{MIST}" opacity=".55"/><circle cx="138" cy="160" r="4" fill="{MIST}" opacity=".4"/></g>')
+        o.append(f'<g{rig.c("twinkle")}{rig.st("animation-duration:2.2s")}>' + star(40, 80, 6, "#E3F4FF") + '</g>')
+        o.append(f'<g{rig.c("twinkle")}{rig.st("animation-duration:2.2s;animation-delay:-1.1s")}>' + star(166, 70, 5, "#E3F4FF") + '</g>')
+    return o
+
+
+def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=None, belly=False, winter=False, small=False):
     cfg = MOODS[mood]
     gid = f"mg{next(_ids)}"
     rig = Rig(anim, gid)
@@ -583,7 +755,9 @@ def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=N
     tint = CORAL if mood == "error" else None
     lifted = mood == "grabbed"
     defs = (f'<defs><radialGradient id="{gid}"><stop offset="0" stop-color="{MOON}" stop-opacity=".55"/>'
-            f'<stop offset="1" stop-color="{MOON}" stop-opacity="0"/></radialGradient></defs>')
+            f'<stop offset="1" stop-color="{MOON}" stop-opacity="0"/></radialGradient>'
+            f'<radialGradient id="{gid}b" cx=".36" cy=".26" r=".85"><stop offset="0" stop-color="#D3DBFF"/><stop offset=".55" stop-color="{BODY}"/>'
+            f'<stop offset="1" stop-color="#97A5F0"/></radialGradient></defs>')
     o = [defs]
     # shadow (stays on the ground)
     o.append(f'<g transform="translate(100 226)"><g{rig.c("L-sh")}><ellipse cx="0" cy="0" rx="{26 if lifted else 40}" ry="{3.5 if lifted else 5}" '
@@ -607,9 +781,7 @@ def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=N
     fy = 210 if lifted else 204
     o.append(f'<g{rig.c("L-fl")}><ellipse cx="82" cy="{fy}" rx="12" ry="6.5" fill="{DEEP}"/></g>'
              f'<g{rig.c("L-fr")}><ellipse cx="118" cy="{fy}" rx="12" ry="6.5" fill="{DEEP}"/></g>')
-    o.append(f'<path d="{BODY_D}" fill="{BODY}"/>')
-    o.append('<ellipse cx="74" cy="104" rx="11" ry="16" transform="rotate(38 74 104)" fill="#fff" opacity=".35"/>')
-    o.append(f'<ellipse cx="100" cy="180" rx="38" ry="18" fill="{MIST}" opacity=".7"/>')
+    o.append(body_layers(gid, small))
     # face
     e_shapes, blinkable = eyes(cfg["e"], rig)
     if blinkable and anim:
@@ -617,9 +789,12 @@ def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=N
         e_shapes = f'<g class="L-blink" style="animation-duration:{bd:.2f}s;animation-delay:{-delay*1.9:.2f}s">{e_shapes}</g>'
     o.append(f'<g{rig.c("L-face")}>')
     o.append(f'<g{rig.c("L-x2") if mood == "shy" else ""}>{blush(cfg["b"])}</g>')
-    o.append(star(58, 156, 4.5, MOON) + star(142, 156, 4.5, MOON))
-    o.append(f'<g{rig.c("L-eyes")}>{e_shapes}</g>')
-    o.append(mouth(cfg["m"], rig))
+    if not small:
+        o.append(star(58, 156, 4.5, MOON) + star(142, 156, 4.5, MOON))
+    ez = ' transform="translate(100 140) scale(1.28) translate(-100 -140)"' if small else ""
+    mz = ' transform="translate(100 160) scale(1.3) translate(-100 -160)"' if small else ""
+    o.append(f'<g{ez}><g{rig.c("L-eyes")}>{e_shapes}</g></g>')
+    o.append(f'<g{mz}>{mouth(cfg["m"], rig)}</g>')
     o.append('</g>')
     if winter:
         o.append(scarf(rig))
@@ -650,35 +825,7 @@ def nimi(mood="idle", size=220, anim=True, delay=0.0, sil=None, sats=0, volume=N
                 rc = f' class="pring" style="animation-delay:{dl}s"' if anim else ' opacity=".5"'
                 o.append(f'<g transform="translate({mm[2]} {mm[3]})"><circle{rc} r="14" fill="none" stroke="{MOON}" stroke-width="2"/></g>')
         o.append(static_moon(rig, mm[1], mm[2], mm[3], tint, halo=(mood == "attention")))
-    # --- extras
-    if mood == "sleeping":
-        for (x, y, fs, dl, op) in ((140, 74, 20, 0, 1), (154, 60, 15, -1, .8), (166, 48, 11, -2, .6)):
-            o.append(f'<text{rig.c("zfloat")}{rig.st(f"animation-delay:{dl}s")} x="{x}" y="{y}" font-family="Rubik, sans-serif" '
-                     f'font-weight="700" font-size="{fs}" fill="{MIST}" opacity="{op}">z</text>')
-    if mood == "curious":
-        o.append(f'<g transform="translate(152 66)"><g{rig.c("L-x1")}><text x="-6" y="8" font-family="Rubik, sans-serif" font-weight="700" font-size="24" fill="{MOON}">?</text></g></g>')
-    if mood == "surprised":
-        o.append(f'<g{rig.c("L-x1")}><path d="M70 62 L64 52 M100 56 L100 44 M130 62 L136 52" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>')
-    if mood == "excited":
-        for (sx, sy, ss, dl) in ((26, 82, 6, 0), (178, 74, 5, -.5), (186, 176, 4, -1), (18, 160, 3.5, -.8), (100, 52, 4, -.3)):
-            o.append(star(sx, sy, ss, "#fff", "twinkle" if anim else "", f"animation-delay:{dl}s" if anim else ""))
-    if mood == "working":
-        for i, dx in enumerate((0, 10, 20)):
-            o.append(f'<circle{rig.c("dot")}{rig.st(f"animation-delay:{i*0.18:.2f}s")} cx="{136+dx}" cy="66" r="3.2" fill="{MIST}"/>')
-    if mood == "error":
-        o.append(f'<g transform="translate(160 80)"><g{rig.c("L-x1")}><circle r="11" fill="{CORAL}"/><rect x="-1.6" y="-7.5" width="3.2" height="9" rx="1.6" fill="#fff"/><circle cy="6" r="1.8" fill="#fff"/></g></g>')
-        o.append(f'<g{rig.c("L-x2")}><path d="M52 98 Q58 108 52 113 Q46 108 52 98 Z" fill="#A9E4FF"/></g>')
-    if mood == "music":
-        o.append(note(150, 76, MOON, rig, 0))
-        o.append(note(36, 92, ROSE, rig, -1.2))
-        o.append(note(168, 112, ROSE, rig, -.6))
-    if mood == "bored":
-        o.append(f'<g{rig.c("L-x1")}><circle cx="114" cy="164" r="3" fill="{MIST}" opacity=".7"/><circle cx="122" cy="161" r="4.5" fill="{MIST}" opacity=".5"/></g>')
-    if mood == "dizzy":
-        st_ = "".join(star(30 * math.cos(a), 30 * math.sin(a), 5, MOON) for a in (0, math.pi/2, math.pi, 3*math.pi/2))
-        o.append(f'<g transform="translate(100 62) scale(1 .32)"><g{rig.c("spin")}>{st_}</g></g>')
-    if mood == "grabbed":
-        o.append(f'<path d="M100 72 L100 30" stroke="{MIST}" stroke-width="2" stroke-dasharray="3 5" opacity=".5"/>')
+    o.extend(extras(mood, rig, anim))
     o.append('</g>')  # /L-lift
     cls = f"m-{mood}" if anim else ""
     return _svg("".join(o), size, f"NIMI — {mood}", cls)

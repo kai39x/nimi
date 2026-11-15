@@ -85,6 +85,13 @@ export const en: Record<TKey, string> = {
   "settings.nuri.active": "Active",
   "settings.reduceMotion": "Reduce motion",
   "settings.reduceMotion.sub": "No hops or squash; blinks and fades stay",
+  "settings.capsuleStyle": "Capsule style",
+  "settings.capsuleStyle.sub": "What shows when compact",
+  "settings.capsuleStyle.nimiInCapsule": "NIMI in capsule",
+  "settings.capsuleStyle.capsuleOnly": "Capsule only",
+  "settings.capsuleStyle.nimiOnly": "NIMI only",
+  "settings.peek": "Peek over maximized windows",
+  "settings.peek.sub": "Slides up to a thin strip so tabs and title bars stay clickable",
 
   "overlay.recenter": "Put NIMI back in place",
 };

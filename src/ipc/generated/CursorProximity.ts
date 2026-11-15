@@ -4,4 +4,9 @@
  * Cursor relation to the interactive regions: `near` = within the approach zone,
  * `inside` = over an interactive element.
  */
-export type CursorProximity = { near: boolean, inside: boolean, };
+export type CursorProximity = { near: boolean, inside: boolean, 
+/**
+ * Within 60 px of the hit rects, or the primary button is held close by (a file drag):
+ * a peeking capsule slides down.
+ */
+reveal: boolean, };

@@ -49,6 +49,7 @@ pub fn run() {
             ipc::start_overlay_drag,
             ipc::recenter_overlay,
             ipc::set_overlay_expanded,
+            ipc::get_overlay_covered,
             ipc::focus_overlay,
             ipc::open_settings_window,
             ipc::set_tray_state,
