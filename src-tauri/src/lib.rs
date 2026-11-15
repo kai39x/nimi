@@ -6,6 +6,7 @@
 //! are generated from one place.
 
 mod ipc;
+mod media;
 mod settings;
 mod tray;
 mod window;
@@ -37,6 +38,7 @@ pub fn run() {
                 .build(),
         )
         .manage(Arc::new(window::OverlayState::default()))
+        .manage(Arc::new(media::MediaShared::default()))
         .invoke_handler(tauri::generate_handler![
             ipc::app_info,
             ipc::get_settings,
@@ -53,6 +55,13 @@ pub fn run() {
             ipc::focus_overlay,
             ipc::open_settings_window,
             ipc::set_tray_state,
+            ipc::get_media_state,
+            ipc::get_media_art,
+            ipc::media_command,
+            ipc::open_media_player,
+            ipc::get_volume,
+            ipc::set_volume,
+            ipc::set_volume_muted,
             ipc::dev_window_flags,
             ipc::dev_hittest_state,
         ])
@@ -81,6 +90,7 @@ pub fn run() {
             }
             window::setup(handle)?;
             tray::setup(handle)?;
+            media::spawn(handle);
             if std::env::args().any(|arg| arg == "--settings") {
                 window::settings_window::open(handle)?;
             }

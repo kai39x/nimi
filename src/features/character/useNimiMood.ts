@@ -45,6 +45,19 @@ export function setMoodOverride(mood: Mood | null, ttlMs?: number) {
   overrideListeners.forEach((fn) => fn());
 }
 
+let ambient: Mood | null = null;
+
+/**
+ * A background mood that lasts while something goes on (music playing): it beats idle, bored,
+ * sleeping and hover, but clicks, drags and `setMoodOverride` still show through. While it is
+ * set NIMI does not get bored.
+ */
+export function setAmbientMood(mood: Mood | null) {
+  if (ambient === mood) return;
+  ambient = mood;
+  overrideListeners.forEach((fn) => fn());
+}
+
 export interface MoodOptions {
   /** Minutes after getting bored before falling asleep; 0 = never. */
   sleepAfterMin: number;
@@ -75,6 +88,7 @@ export function useNimiMood({ sleepAfterMin, nimi }: MoodOptions) {
     if (override && (override.until === null || override.until > now)) return override.mood;
     if (dragging.current) return "grabbed";
     if (reaction.current && reaction.current.until > now) return reaction.current.mood;
+    if (ambient) return ambient;
     if (base.current === "sleeping") return "sleeping";
     if (loved.current) return "love";
     if (near.current || hovering.current) return "curious";
@@ -92,6 +106,7 @@ export function useNimiMood({ sleepAfterMin, nimi }: MoodOptions) {
   useEffect(() => {
     const tick = window.setInterval(() => {
       if (hidden.current) return;
+      if (ambient) lastInteraction.current = Date.now();
       const idleFor = Date.now() - lastInteraction.current;
       const hour = new Date().getHours();
       const lateNight = hour >= 23 || hour < 6;

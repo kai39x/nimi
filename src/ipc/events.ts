@@ -9,6 +9,9 @@ export const Events = {
   overlayCovered: "nimi://overlay/covered",
   settingsChanged: "nimi://settings/changed",
   trayOpen: "nimi://tray/open",
+  mediaState: "nimi://media/state",
+  mediaArt: "nimi://media/art",
+  mediaVolume: "nimi://media/volume",
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

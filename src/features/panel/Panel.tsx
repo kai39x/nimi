@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Nimi } from "@/features/character/Nimi";
+import { MusicTab } from "@/features/music/Music";
 import { Icon } from "@/components/Icon";
 import { useT, type TKey } from "@/i18n";
 import { openSettingsWindow } from "@/ipc/commands";
@@ -9,8 +11,7 @@ import { moodLabel } from "./moodLabels";
 import { TabBar, type TabId } from "./TabBar";
 import "./panel.css";
 
-const COMING: Record<Exclude<TabId, "home">, TKey> = {
-  music: "panel.soon.music",
+const COMING: Record<Exclude<TabId, "home" | "music">, TKey> = {
   system: "panel.soon.system",
   shortcuts: "panel.soon.shortcuts",
   notifications: "panel.soon.notifications",
@@ -22,10 +23,21 @@ const COMING: Record<Exclude<TabId, "home">, TKey> = {
  * mute / settings / collapse, six tabs, and the tab content. Mounted inside the shell; it fades
  * in 120 ms after the morph starts and is inert while the shell is compact.
  */
-export function Panel({ open, mood, onCollapse }: { open: boolean; mood: Mood; onCollapse: () => void }) {
+export function Panel({
+  open,
+  mood,
+  tab,
+  onTab,
+  onCollapse,
+}: {
+  open: boolean;
+  mood: Mood;
+  tab: TabId;
+  onTab: (tab: TabId) => void;
+  onCollapse: () => void;
+}) {
   const t = useT();
   const settings = useSettings();
-  const [tab, setTab] = useState<TabId>("home");
   const lang = settings?.language ?? "ar";
   const muted = settings?.soundsMuted ?? false;
 
@@ -61,11 +73,13 @@ export function Panel({ open, mood, onCollapse }: { open: boolean; mood: Mood; o
         </div>
       </header>
 
-      <TabBar active={tab} onChange={setTab} badges={{ notifications: 0 }} />
+      <TabBar active={tab} onChange={onTab} badges={{ notifications: 0 }} />
 
       <div className="panel__body">
         {tab === "home" ? (
           <HomeTab mood={mood} />
+        ) : tab === "music" ? (
+          <MusicTab nimi={<Nimi mood="bored" size={56} idleBehaviors={false} reducedMotion={settings?.reduceMotion ?? false} />} />
         ) : (
           <div className="soon">
             <div className="soon__title">{t(COMING[tab])}</div>

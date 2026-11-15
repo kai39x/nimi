@@ -176,6 +176,7 @@ export function Nimi({
                       <g ref={slot("eyes")} />
                     </g>
                   </Frame>
+                  <div className="n-lift-host" ref={slot("eyesLift")} />
                 </div>
                 <Frame className="n-mouth">
                   <g transform={small ? scaleAbout(100, 160, 1.3) : undefined}>
@@ -232,6 +233,7 @@ export function Nimi({
             <Frame className="n-extras">
               <g ref={slot("extras")} />
             </Frame>
+            <div className="n-lift-host n-extras-lift" ref={slot("extrasLift")} />
           </div>
         </div>
       </div>

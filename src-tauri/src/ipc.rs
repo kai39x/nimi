@@ -11,6 +11,7 @@ use tauri::{AppHandle, Manager, State};
 use ts_rs::TS;
 
 use crate::{
+    media::{self, MediaShared},
     settings::SettingsStore,
     window::{self, OverlayState},
 };
@@ -25,6 +26,9 @@ pub mod events {
     pub const OVERLAY_COVERED: &str = "nimi://overlay/covered";
     pub const SETTINGS_CHANGED: &str = "nimi://settings/changed";
     pub const TRAY_OPEN: &str = "nimi://tray/open";
+    pub const MEDIA_STATE: &str = "nimi://media/state";
+    pub const MEDIA_ART: &str = "nimi://media/art";
+    pub const MEDIA_VOLUME: &str = "nimi://media/volume";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -297,6 +301,128 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
         }
     })
     .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------------------------
+// Media (SMTC + system volume, docs/PLAN.md §3)
+
+/// Playback status of the current SMTC session; `none` when no app shares media.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum PlaybackStatus {
+    #[default]
+    None,
+    Stopped,
+    Changing,
+    Paused,
+    Playing,
+}
+
+/// One snapshot of the current media session. Position is sampled at `lastUpdatedMs` (Unix
+/// ms); the frontend interpolates `positionMs + (now − lastUpdatedMs) × rate` while playing.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MediaState {
+    pub status: PlaybackStatus,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    /// The app's AppUserModelId (`Spotify.exe`, `MSEdge`, …).
+    pub source_app: String,
+    /// A readable app name for «يشتغل من …».
+    pub source_name: String,
+    #[ts(type = "number")]
+    pub position_ms: i64,
+    #[ts(type = "number")]
+    pub duration_ms: i64,
+    #[ts(type = "number")]
+    pub last_updated_ms: i64,
+    pub rate: f64,
+    pub can_play_pause: bool,
+    pub can_next: bool,
+    pub can_prev: bool,
+    /// Seeking (and ±10 s) is allowed; otherwise the seek bar is read-only.
+    pub can_seek: bool,
+    /// Id of the album art (fetch it with `get_media_art`); changes only when the art does.
+    pub art_id: Option<String>,
+}
+
+/// Album art as a `data:` URL, sent once per change (`nimi://media/art`).
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MediaArt {
+    pub id: String,
+    pub data_url: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, TS)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+#[ts(export)]
+pub enum MediaCommand {
+    PlayPause,
+    Next,
+    Previous,
+    /// Absolute position in ms.
+    SeekTo {
+        #[ts(type = "number")]
+        ms: i64,
+    },
+    /// Relative jump in ms (±10 s buttons).
+    SeekBy {
+        #[ts(type = "number")]
+        ms: i64,
+    },
+}
+
+/// System master volume (Core Audio), 0..1.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct VolumeState {
+    pub level: f64,
+    pub muted: bool,
+    /// False when no audio endpoint could be opened (the slider hides).
+    pub available: bool,
+}
+
+#[tauri::command]
+pub fn get_media_state(media: State<'_, Arc<MediaShared>>) -> MediaState {
+    media.state()
+}
+
+#[tauri::command]
+pub fn get_media_art(media: State<'_, Arc<MediaShared>>) -> Option<MediaArt> {
+    media.art()
+}
+
+/// Fire-and-forget: the result arrives as the next `nimi://media/state`.
+#[tauri::command]
+pub fn media_command(media: State<'_, Arc<MediaShared>>, command: MediaCommand) {
+    media.send(media::Msg::Command(command));
+}
+
+/// «افتح مشغّلك المفضّل» in the empty music state.
+#[tauri::command]
+pub fn open_media_player(last_app: Option<String>) -> Result<(), String> {
+    media::open_player(last_app.as_deref()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_volume(media: State<'_, Arc<MediaShared>>) -> VolumeState {
+    media.volume()
+}
+
+#[tauri::command]
+pub fn set_volume(media: State<'_, Arc<MediaShared>>, level: f64) {
+    media.send_volume(media::VolumeMsg::Set(level.clamp(0.0, 1.0)));
+}
+
+#[tauri::command]
+pub fn set_volume_muted(media: State<'_, Arc<MediaShared>>, muted: bool) {
+    media.send_volume(media::VolumeMsg::Mute(muted));
 }
 
 // ---------------------------------------------------------------------------------------------

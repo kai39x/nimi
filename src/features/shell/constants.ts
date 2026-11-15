@@ -10,3 +10,9 @@ export const PANEL_TOP = 44;
 export const CAPSULE_TOP = 10;
 /** NIMI's nominal size on top of the panel. */
 export const PANEL_NIMI_SIZE = 96;
+/** Music island (spec §4, board 07 option B) and NIMI's size in its left slot. */
+export const ISLAND_WIDTH = 736;
+export const ISLAND_HEIGHT = 160;
+export const ISLAND_NIMI_SIZE = 100;
+/** The capsule while music plays: art · NIMI · equalizer · time (board 06/07 ①). */
+export const MUSIC_CAPSULE_WIDTH = 220;

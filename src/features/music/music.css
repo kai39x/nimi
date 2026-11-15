@@ -1,0 +1,506 @@
+/* Music UI (design spec §4, board 07 option B). Media content runs left-to-right in both
+   languages, as drawn on the boards; text inside keeps its own direction (<bdi>). */
+
+/* --- shared pieces -------------------------------------------------------------------------- */
+
+.art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--n-r-tile);
+  background: linear-gradient(135deg, var(--n-rose), var(--n-peri));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Equalizer: four bars bouncing on the compositor (scaleY), resting low while paused. */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  flex: none;
+}
+
+.eq i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--n-butter);
+  transform-origin: 50% 100%;
+  transform: scaleY(0.3);
+}
+
+.eq.is-playing i {
+  animation: eq-bounce 0.9s ease-in-out infinite;
+  will-change: transform;
+}
+
+.eq.is-playing i:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+
+.eq.is-playing i:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: -0.5s;
+}
+
+.eq.is-playing i:nth-child(4) {
+  animation-duration: 0.8s;
+  animation-delay: -0.15s;
+}
+
+.eq--lg {
+  height: 22px;
+  gap: 3px;
+}
+
+.eq--lg i {
+  width: 4px;
+}
+
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Each line shrinks to its text and sits next to the art, whatever the script. */
+.song {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.song--inline {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--n-s2);
+  white-space: nowrap;
+}
+
+.song__title,
+.song__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--n-text);
+  min-width: 0;
+}
+
+.song__artist {
+  font-size: 14px;
+  color: var(--n-muted);
+  min-width: 0;
+}
+
+.song--inline .song__title {
+  flex: 0 1 auto;
+}
+
+.song--inline .song__artist {
+  flex: 0 10 auto;
+}
+
+/* Seek bar: butter fill on a faint track; read-only players hide the thumb. */
+.seek {
+  direction: ltr;
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  width: 100%;
+}
+
+.seek__time {
+  flex: none;
+  min-width: 34px;
+  font-size: 12px;
+  color: var(--n-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.seek__time:last-child {
+  text-align: end;
+}
+
+.seek__bar,
+.vol__bar {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--n-butter) var(--pct), rgba(255, 255, 255, 0.14) var(--pct));
+  outline: none;
+  cursor: pointer;
+}
+
+.seek__bar::-webkit-slider-thumb,
+.vol__bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+  transition: transform var(--n-dur-press) var(--n-ease-out);
+}
+
+.seek__bar:hover::-webkit-slider-thumb,
+.vol__bar:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.seek.is-readonly .seek__bar {
+  cursor: default;
+}
+
+.seek.is-readonly .seek__bar::-webkit-slider-thumb {
+  width: 0;
+  height: 0;
+  box-shadow: none;
+}
+
+.seek__bar:focus-visible::-webkit-slider-thumb,
+.vol__bar:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--n-butter);
+  outline-offset: 2px;
+}
+
+/* Transport buttons: round, the play button a butter disc (board 07). */
+.transport {
+  direction: ltr;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tbtn {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--n-fill);
+  color: var(--n-text);
+  cursor: pointer;
+  transition:
+    background var(--n-dur-press) var(--n-ease-out),
+    transform var(--n-dur-press) var(--n-ease-out);
+}
+
+.tbtn:hover:not(:disabled) {
+  background: var(--n-fill-hover);
+}
+
+.tbtn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.tbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tbtn--play {
+  width: 48px;
+  height: 48px;
+  background: var(--n-butter);
+  color: var(--n-ink);
+  box-shadow: var(--n-glow-primary);
+}
+
+.tbtn--play:hover:not(:disabled) {
+  background: var(--n-butter);
+  filter: brightness(1.06);
+}
+
+.transport--lg {
+  justify-content: center;
+  gap: 18px;
+}
+
+.tbtn--lg {
+  width: 44px;
+  height: 44px;
+}
+
+.tbtn--play-lg {
+  width: 64px;
+  height: 64px;
+}
+
+/* Volume */
+.vol {
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--n-s2);
+  color: var(--n-muted);
+}
+
+.vol__bar {
+  flex: none;
+  width: 80px;
+}
+
+.vol--wide {
+  display: flex;
+  width: 100%;
+  gap: var(--n-s3);
+}
+
+.vol--wide .vol__bar {
+  flex: 1;
+  width: auto;
+}
+
+.vol__pct {
+  min-width: 36px;
+  text-align: end;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill-btn {
+  height: 34px;
+  padding: 0 var(--n-s4);
+  border: 0;
+  border-radius: 999px;
+  background: var(--n-fill);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill-btn--primary {
+  background: var(--n-butter);
+  color: var(--n-ink);
+}
+
+/* «ما فيه شي شغّال» */
+.music-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--n-s2);
+}
+
+.music-empty__title {
+  font-size: var(--n-fs-title);
+  font-weight: 600;
+}
+
+.music-empty__sub {
+  color: var(--n-muted);
+  font-size: var(--n-fs-label);
+  margin-bottom: var(--n-s2);
+}
+
+/* Home's «now playing» card: transport stays left-to-right like everywhere else. */
+.nowplaying__controls {
+  direction: ltr;
+}
+
+/* --- capsule music look (board 06/07 ①) ------------------------------------------------------ */
+
+.music-capsule {
+  position: absolute;
+  inset: 0;
+  direction: ltr;
+  pointer-events: none;
+  opacity: 0;
+  animation: music-in 240ms var(--n-ease-out) 120ms forwards;
+}
+
+@keyframes music-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.music-capsule__art {
+  position: absolute;
+  left: calc(10px * var(--nimi-scale));
+  top: 50%;
+  translate: 0 -50%;
+  width: calc(34px * var(--nimi-scale)) !important;
+  height: calc(34px * var(--nimi-scale)) !important;
+  border-radius: calc(10px * var(--nimi-scale));
+}
+
+.music-capsule__end {
+  position: absolute;
+  right: calc(16px * var(--nimi-scale));
+  top: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(8px * var(--nimi-scale));
+}
+
+.music-capsule__time {
+  font-size: calc(12px * var(--nimi-scale));
+  color: var(--n-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- island (board 07 ②, 736 × 160) ----------------------------------------------------------- */
+
+.island {
+  position: absolute;
+  inset: 0;
+  direction: ltr;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--n-dur-content) var(--n-ease-out);
+}
+
+.island.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: var(--n-delay-content);
+}
+
+.island__divider {
+  position: absolute;
+  left: 162px;
+  top: 32px;
+  bottom: 32px;
+  width: 1px;
+  background: var(--n-line);
+}
+
+.island__art {
+  position: absolute;
+  left: 184px;
+  top: 40px;
+  border-radius: 18px;
+}
+
+.island__main {
+  position: absolute;
+  left: 284px;
+  right: 30px;
+  top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.island__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.island__empty {
+  position: absolute;
+  left: 190px;
+  right: 80px;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+/* Inside the pill's 80 px corner curve (at 20 px from the top the edge is ~22 px in). */
+.island__expand {
+  position: absolute;
+  right: 46px;
+  top: 20px;
+  width: 30px;
+  height: 30px;
+  opacity: 0.7;
+}
+
+.island__expand:hover {
+  opacity: 1;
+}
+
+/* --- panel tab ------------------------------------------------------------------------------- */
+
+.music-tab {
+  max-width: 560px;
+  margin: var(--n-s2) auto 0;
+  padding: var(--n-s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s4);
+  direction: ltr;
+}
+
+.music-tab__head {
+  display: flex;
+  align-items: center;
+  gap: var(--n-s4);
+}
+
+.music-tab__head .art {
+  border-radius: 20px;
+}
+
+.music-tab__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.music-tab__text .song__title {
+  font-size: 22px;
+}
+
+.music-tab__text .song__artist {
+  font-size: 16px;
+}
+
+.music-tab__from {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--n-muted);
+}
+
+.music-tab__note {
+  margin-top: calc(-1 * var(--n-s2));
+  font-size: 12px;
+  color: var(--n-muted);
+  text-align: center;
+}
+
+.music-tab--empty {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--n-s4);
+  direction: inherit;
+}

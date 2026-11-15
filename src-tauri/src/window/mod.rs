@@ -85,8 +85,10 @@ pub fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         overlay.set_ignore_cursor_events(true)?;
     }
     placement::place(app)?;
+    let before = foreground::current();
     overlay.show()?;
     st.visible.store(true, Ordering::Relaxed);
+    settle_focus(app, before);
 
     if !dev_skip("subclass") {
         subclass::install(app, &overlay)?;
@@ -98,6 +100,37 @@ pub fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         fullscreen::spawn(app.clone());
     }
     Ok(())
+}
+
+/// WebView2 marks the page focused when the overlay's webview is created, and since the overlay
+/// is never activated it never gets the blur — Chromium then never throttles it (≈3× idle CPU)
+/// until the panel is opened and closed once. A freshly launched process may also keep the
+/// foreground itself. So once at startup, after WebView2 has settled, run the panel's own focus
+/// round trip: focus the overlay, then hand the foreground back to whatever had it.
+fn settle_focus(app: &AppHandle, before: isize) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        let st = state(&app);
+        if st.expanded.load(Ordering::Relaxed) {
+            return; // the panel is already open; its close does the same
+        }
+        let ours = st.hwnd.load(Ordering::Relaxed);
+        let fg = foreground::current();
+        let back_to = if fg != 0 && fg != ours { fg } else { before };
+        if back_to == 0 || back_to == ours {
+            return;
+        }
+        if let Err(err) = set_overlay_focus(&app, true) {
+            log::info!("startup focus round trip skipped: {err}");
+            return;
+        }
+        st.prev_foreground.store(back_to, Ordering::Relaxed);
+        std::thread::sleep(std::time::Duration::from_millis(120));
+        if !st.expanded.load(Ordering::Relaxed) {
+            let _ = set_overlay_focus(&app, false);
+        }
+    });
 }
 
 /// Dev builds only: `NIMI_DEV_SKIP=clickthrough,subclass,hittest,fullscreen` disables parts of

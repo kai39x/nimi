@@ -265,6 +265,62 @@ function orbitPt(th: number): [number, number] {
   ];
 }
 
+/** Looping animations inside the lab's markup (notes, z's, twinkles, dots, spins, rings, extras). */
+const LIFT_SELECTOR = ".note, .zfloat, .twinkle, .dot, .spin, .pring, .sigh, .L-x1, .L-x2";
+
+/**
+ * A CSS animation on an element *inside* an SVG repaints that whole SVG on the main thread every
+ * frame (~20 % of a core for the music notes at 143 Hz). This moves each animated group of a slot
+ * into its own small HTML box — same geometry, same classes, so the same keyframes — where the
+ * transform runs on the compositor. The parent's transform (translate, the small variant's scale,
+ * the dizzy squash) is kept as a matrix on a static wrapper, so nothing looks different.
+ */
+function liftAnimations(slot: SVGGElement, host: HTMLElement) {
+  host.replaceChildren();
+  const svg = slot.ownerSVGElement;
+  const rootCtm = svg?.getScreenCTM();
+  if (!svg || !rootCtm) return; // not rendered (hidden window): the SVG animations stay as they are
+  const toRoot = rootCtm.inverse();
+  const vb = svg.viewBox.baseVal;
+  const found = Array.from(slot.querySelectorAll<SVGGraphicsElement>(LIFT_SELECTOR));
+  for (const el of found) {
+    if (el.parentElement?.closest(LIFT_SELECTOR) || el.hasAttribute("transform")) continue;
+    const parentCtm = (el.parentNode as SVGGraphicsElement).getScreenCTM?.();
+    if (!parentCtm) continue;
+    let box: DOMRect;
+    try {
+      box = el.getBBox();
+    } catch {
+      continue;
+    }
+    if (!box.width && !box.height) continue;
+    // transform-box: fill-box → the computed origin is relative to the element's bbox.
+    const [ox = 0, oy = 0] = getComputedStyle(el).transformOrigin.split(" ").map(parseFloat);
+    const m = toRoot.multiply(parentCtm); // parent user space → root user space
+    const outer = document.createElement("div");
+    outer.className = "n-lift";
+    outer.style.transform = `matrix(${m.a}, ${m.b}, ${m.c}, ${m.d}, ${m.e - vb.x}, ${m.f - vb.y})`;
+    const inner = document.createElement("div");
+    inner.setAttribute("class", `${el.getAttribute("class") ?? ""} n-lift__anim`);
+    inner.setAttribute("style", el.getAttribute("style") ?? "");
+    inner.style.left = `${box.x}px`;
+    inner.style.top = `${box.y}px`;
+    inner.style.width = `${box.width}px`;
+    inner.style.height = `${box.height}px`;
+    inner.style.transformOrigin = `${ox}px ${oy}px`;
+    const art = document.createElementNS(SVG_NS, "svg");
+    art.setAttribute("viewBox", `${box.x} ${box.y} ${box.width} ${box.height}`);
+    const clone = el.cloneNode(true) as SVGElement;
+    clone.removeAttribute("class");
+    clone.removeAttribute("style");
+    art.appendChild(clone);
+    inner.appendChild(art);
+    outer.appendChild(inner);
+    host.appendChild(outer);
+    el.remove();
+  }
+}
+
 /** Moods whose program moves quickly (hops, shakes, grooves) and needs the full step rate. */
 const FAST_MOODS = new Set<Mood>([
   "happy",
@@ -302,7 +358,14 @@ function loop(now: number) {
   raf = 0;
   if (paused) return;
   let fast = false;
-  for (const engine of live) fast = engine.frame(now) || fast;
+  for (const engine of live) {
+    try {
+      fast = engine.frame(now) || fast;
+    } catch (err) {
+      // One broken frame must not stop every NIMI on screen; log it and keep the loop alive.
+      console.error("nimi engine frame failed", err);
+    }
+  }
   if (!live.size) return;
   const spent = performance.now() - now;
   // Wake a little early so the next requestAnimationFrame lands on the following vsync.
@@ -375,6 +438,9 @@ export interface NimiElements {
   mouth: SVGGElement;
   blush: SVGGElement;
   extras: SVGGElement;
+  /** HTML hosts for animated groups lifted out of the eyes / extras SVG (see `liftAnimations`). */
+  eyesLift: HTMLElement;
+  extrasLift: HTMLElement;
   ringB: SVGGElement;
   ringF: SVGGElement;
   moonArt: SVGGElement;
@@ -538,12 +604,14 @@ export class NimiEngine {
   private applyFace(f: Face, instant = false) {
     this.face = f;
     this.els.eyes.innerHTML = EYES[f.e] ?? "";
+    liftAnimations(this.els.eyes, this.els.eyesLift);
     this.setMouth(f.m, instant);
     this.els.blush.innerHTML = BLUSH[f.b] ?? "";
   }
 
   private applyExtras(m: Mood | "music") {
     this.els.extras.innerHTML = EXTRAS[m] ?? "";
+    liftAnimations(this.els.extras, this.els.extrasLift);
   }
 
   private applyOrbit(style: string) {
@@ -625,6 +693,7 @@ export class NimiEngine {
   // --- moods -----------------------------------------------------------------------------------
   /** Requests a mood; transitions run one at a time and always land on the latest request. */
   setMood(m: Mood) {
+    if (!(m in MOOD_DATA)) return; // unknown mood (e.g. a typo from a dev hook): keep the current one
     this.target = m;
     if (!this.switching) void this.runSwitches();
   }

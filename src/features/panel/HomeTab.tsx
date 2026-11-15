@@ -4,6 +4,7 @@ import { useT, type Lang } from "@/i18n";
 import { daysBetween, fmtNumber, fmtPercent } from "@/lib/format";
 import { useSettings } from "@/lib/settings";
 import type { Mood } from "@/features/character/rig/moods";
+import { NowPlayingCard } from "@/features/music/Music";
 import { moodLabel, moodLevel } from "./moodLabels";
 import { useEnergy } from "./useEnergy";
 
@@ -66,26 +67,7 @@ export function HomeTab({ mood }: { mood: Mood }) {
       </section>
 
       <div className="home__stack">
-        <section className="card nowplaying">
-          <div className="nowplaying__art">
-            <Icon name="music" size={22} />
-          </div>
-          <div className="nowplaying__text">
-            <div className="card__title">{t("home.nowplaying.none")}</div>
-            <div className="card__sub">{t("home.nowplaying.hint")}</div>
-          </div>
-          <div className="nowplaying__controls" aria-hidden="true">
-            <span className="icon-btn icon-btn--sm is-inert">
-              <Icon name="prev" size={16} />
-            </span>
-            <span className="icon-btn icon-btn--sm icon-btn--primary is-inert">
-              <Icon name="play" size={16} />
-            </span>
-            <span className="icon-btn icon-btn--sm is-inert">
-              <Icon name="next" size={16} />
-            </span>
-          </div>
-        </section>
+        <NowPlayingCard />
 
         <section className="card minisys">
           {(

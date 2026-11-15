@@ -114,6 +114,24 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 - Measured on 4K @ 200 %, 143 Hz: idle with the panel closed ≈ 3–5 % of one core for the whole
   process tree (≈0.3–0.4 % of the machine).
 
+### What phase 4 taught us (music, character v3)
+
+- **Lift SVG-internal animations.** A CSS animation on an element *inside* an SVG (the rig's notes,
+  z's, twinkles, rings) repaints that SVG on the main thread every frame — ~20 % of a core for the
+  three music notes at 143 Hz. `engine.ts` `liftAnimations` moves each animated group into its own
+  small HTML box (parent transform kept as a matrix) so the same keyframes run on the compositor.
+  Same reason Nuri's glow and roll are HTML wrappers.
+- **The overlay starts unthrottled.** WebView2 marks the page focused when the webview is created;
+  the overlay is never activated, so it never gets a blur and Chromium never throttles it (≈3× idle
+  CPU) until the panel is opened and closed once. `window::settle_focus` runs that focus round trip
+  once, 1.5 s after startup. Check with `document.hasFocus()` over CDP before measuring CPU.
+- **Measure CPU only after ~30 s**: right after a launch Vite and WebView2 warm-up dominate, and
+  numbers swing ±5 % run to run; repeat and report ranges.
+- **Testing SMTC without a player**: a local page with an `<audio>` element and
+  `navigator.mediaSession` metadata/action handlers (title, artist, artwork, seek, prev/next),
+  played in the built-in browser pane, shows up as a full SMTC session.
+- One exception in the shared frame loop used to stop every NIMI; the loop now catches per engine.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

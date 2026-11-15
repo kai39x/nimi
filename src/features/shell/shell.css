@@ -114,6 +114,130 @@
   width: calc(78px * var(--nimi-scale));
 }
 
+/* --- music (spec §4, board 06/07 option B) --------------------------------------------------- */
+
+/* While a song plays the capsule widens for art · NIMI · equalizer · time; NIMI sits a little
+   left of center, between the art and the bars (board 06 «أغنية شغالة»). */
+.shell--capsule.shell--music {
+  width: calc(220px * var(--nimi-scale));
+}
+
+.shell--music .shell__nimi {
+  left: calc(50% - 16px * var(--nimi-scale));
+}
+
+.peek-strip--music {
+  width: calc(220px * var(--nimi-scale));
+}
+
+/* The island: 736 × 160, pill-shaped, NIMI in the left slot (board 07 ②). */
+.shell--island {
+  top: var(--capsule-top);
+  width: 736px;
+  height: 160px;
+  border-radius: 80px;
+}
+
+.shell--island .shell__nimi {
+  left: 80px;
+  top: 50%;
+  margin-top: -2px;
+  pointer-events: none;
+}
+
+.shell__nimi {
+  transition:
+    top var(--n-dur-expand) var(--n-ease-spring),
+    left var(--n-dur-expand) var(--n-ease-spring),
+    margin-top var(--n-dur-expand) var(--n-ease-spring),
+    translate 280ms var(--n-ease-spring);
+}
+
+/* Pills under the capsule: song name (hover), volume % (wheel), play/pause (double-click). */
+.capsule-pill {
+  position: absolute;
+  top: calc(100% + 14px * var(--nimi-scale));
+  left: 50%;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--n-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  animation: pill-in 180ms var(--n-ease-spring) both;
+}
+
+.capsule-pill bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capsule-pill--butter {
+  color: var(--n-butter);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.capsule-pill__icon {
+  flex: none;
+}
+
+@keyframes pill-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+/* Right-click menu (board 07): next · previous · mute NIMI sounds · hide NIMI for an hour. */
+.capsule-menu {
+  position: absolute;
+  top: calc(100% + 14px * var(--nimi-scale));
+  left: 50%;
+  translate: -50% 0;
+  min-width: 172px;
+  padding: 6px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pill-in 160ms var(--n-ease-spring) both;
+}
+
+.capsule-menu__item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--n-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.capsule-menu__item:hover:not(:disabled),
+.capsule-menu__item:focus-visible {
+  background: var(--n-fill-hover);
+  outline: none;
+}
+
+.capsule-menu__item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* «الكبسولة بس» / leaving the panel: NIMI fades before he is unmounted. */
 .shell__nimi {
   animation: shell-nimi-in 200ms var(--n-ease-out) 1;

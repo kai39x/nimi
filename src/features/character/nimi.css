@@ -139,6 +139,41 @@
   transform-origin: 50% 50%;
 }
 
+/* Animated groups lifted out of the SVG (engine.ts `liftAnimations`): a static wrapper carries
+   the parent's matrix in rig units, the inner box runs the rig's own keyframes on the compositor. */
+.nimi .n-lift-host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.nimi .n-extras-lift {
+  z-index: 6;
+}
+
+.nimi .n-lift {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.nimi .n-lift__anim {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+.nimi .n-lift__anim > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
 /* The ring sparkle (stroke-dashoffset) is stepped by the engine at ~15 fps. */
 .nimi .dashB,
 .nimi .dashF {

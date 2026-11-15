@@ -1,10 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AppInfo } from "./generated/AppInfo";
 import type { HitRect } from "./generated/HitRect";
+import type { MediaArt } from "./generated/MediaArt";
+import type { MediaCommand } from "./generated/MediaCommand";
+import type { MediaState } from "./generated/MediaState";
 import type { MonitorInfo } from "./generated/MonitorInfo";
 import type { OverlayVisibility } from "./generated/OverlayVisibility";
 import type { Settings } from "./generated/Settings";
 import type { TrayState } from "./generated/TrayState";
+import type { VolumeState } from "./generated/VolumeState";
 
 /**
  * Typed wrappers around Rust commands. Names mirror `src-tauri/src/ipc.rs`; payload types are
@@ -33,3 +37,13 @@ export const focusOverlay = (focus: boolean) => invoke<void>("focus_overlay", { 
 
 // Tray
 export const setTrayState = (state: TrayState) => invoke<void>("set_tray_state", { state });
+
+// Media (phase 4)
+export const getMediaState = () => invoke<MediaState>("get_media_state");
+export const getMediaArt = () => invoke<MediaArt | null>("get_media_art");
+export const mediaCommand = (command: MediaCommand) => invoke<void>("media_command", { command });
+export const openMediaPlayer = (lastApp: string | null) => invoke<void>("open_media_player", { lastApp });
+export const getVolume = () => invoke<VolumeState>("get_volume");
+export const setVolume = (level: number) => invoke<void>("set_volume", { level });
+export const setVolumeMuted = (muted: boolean) => invoke<void>("set_volume_muted", { muted });
+
