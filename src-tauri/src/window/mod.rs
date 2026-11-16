@@ -67,6 +67,9 @@ pub struct OverlayState {
     pub hwnd: AtomicIsize,
     /// The window that had focus before the panel took it; focus goes back there on collapse.
     pub prev_foreground: AtomicIsize,
+    /// The last other app window that was in front when NIMI took focus. Unlike
+    /// `prev_foreground` it is never cleared: «ضغط» in the command bar zips its Explorer selection.
+    pub origin: AtomicIsize,
 }
 
 pub fn state(app: &AppHandle) -> Arc<OverlayState> {
@@ -187,9 +190,15 @@ pub fn set_overlay_focus(app: &AppHandle, focus: bool) -> tauri::Result<()> {
         let fg = foreground::current();
         if fg != 0 && fg != ours {
             st.prev_foreground.store(fg, Ordering::Relaxed);
+            st.origin.store(fg, Ordering::Relaxed);
         }
         overlay.set_focusable(true)?;
         overlay.set_focus()?;
+        if foreground::current() != ours {
+            // Opened from the double-Ctrl hook, not a click: Windows' foreground lock refuses a
+            // background process. Joining the foreground thread's input queue lifts it.
+            foreground::force(ours);
+        }
     } else {
         overlay.set_focusable(false)?;
         let prev = st.prev_foreground.swap(0, Ordering::Relaxed);
@@ -204,7 +213,14 @@ mod foreground {
     use std::ffi::c_void;
     use windows::Win32::{
         Foundation::HWND,
-        UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow},
+        System::Threading::{AttachThreadInput, GetCurrentThreadId},
+        UI::{
+            Input::KeyboardAndMouse::SetFocus,
+            WindowsAndMessaging::{
+                BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsWindow,
+                SetForegroundWindow,
+            },
+        },
     };
 
     pub fn current() -> isize {
@@ -219,6 +235,26 @@ mod foreground {
         unsafe {
             if IsWindow(Some(h)).as_bool() {
                 let _ = SetForegroundWindow(h);
+            }
+        }
+    }
+
+    /// Brings our own window to the front from a background state (the hotkey path).
+    pub fn force(hwnd: isize) {
+        let h = HWND(hwnd as *mut c_void);
+        // SAFETY: plain Win32 calls; the input queues are detached again before returning.
+        unsafe {
+            let fg = GetForegroundWindow();
+            let fg_thread = GetWindowThreadProcessId(fg, None);
+            let ours = GetCurrentThreadId();
+            let attached = fg_thread != 0
+                && fg_thread != ours
+                && AttachThreadInput(ours, fg_thread, true).as_bool();
+            let _ = BringWindowToTop(h);
+            let _ = SetForegroundWindow(h);
+            let _ = SetFocus(Some(h));
+            if attached {
+                let _ = AttachThreadInput(ours, fg_thread, false);
             }
         }
     }

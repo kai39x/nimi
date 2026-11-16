@@ -1,3 +1,4 @@
+import { useState } from "react";
 import nimiIdle from "@design/character/svg/nimi_idle.svg";
 import { Icon } from "@/components/Icon";
 import { useT, type Lang } from "@/i18n";
@@ -6,6 +7,9 @@ import { useSettings } from "@/lib/settings";
 import type { Mood } from "@/features/character/rig/moods";
 import { NowPlayingCard } from "@/features/music/Music";
 import { useSystem } from "@/features/system/system";
+import { AppsSheet, Favorites } from "@/features/shortcuts/Favorites";
+import { timerSubtitle } from "@/features/shortcuts/PomodoroCard";
+import { fmtClock, leftMs, timers, useClock, useTimers } from "@/features/shortcuts/timer";
 import { moodLabel, moodLevel } from "./moodLabels";
 import { useEnergy } from "./useEnergy";
 
@@ -19,8 +23,7 @@ function Bar({ value, tone }: { value: number; tone: "butter" | "rose" | "peri" 
 
 /**
  * Home (board 11): NIMI status card, now playing, mini system bars, timer, favorites, top alert.
- * The status card is live; the other cards show their approved empty states until their phases
- * (music 4, system 5, timer/favorites 7, alerts 8) feed them.
+ * The alerts card shows its approved empty state until phase 8 feeds it.
  */
 export function HomeTab({ mood }: { mood: Mood }) {
   const t = useT();
@@ -32,6 +35,10 @@ export function HomeTab({ mood }: { mood: Mood }) {
   const days = settings?.firstRunMs ? daysBetween(settings.firstRunMs) : 0;
   const meals = 0; // phase 6
   const lastAction: string | null = null; // phase 6/7
+  const { main } = useTimers();
+  const running = !!main && main.pausedLeftMs == null;
+  const now = useClock(running);
+  const [picking, setPicking] = useState(false);
 
   return (
     <div className="home">
@@ -94,25 +101,42 @@ export function HomeTab({ mood }: { mood: Mood }) {
           <span className="timer__icon">
             <Icon name="timer" size={18} />
           </span>
-          <div className="timer__text">
-            <div className="card__title">{t("home.timer.none")}</div>
-            <div className="card__sub">{t("home.timer.hint")}</div>
-          </div>
-          <span className="chip chip--butter is-inert">{t("home.timer.start")}</span>
+          {main ? (
+            <>
+              <div className="timer__text">
+                <div className="card__title">
+                  {t(main.kind === "pomodoro" ? "timer.pomodoro" : "timer.title")} · <bdi dir="ltr">{fmtClock(leftMs(main, now))}</bdi>
+                </div>
+                <div className="card__sub">{timerSubtitle(main, t, lang)}</div>
+              </div>
+              <button type="button" className="chip chip--butter home__chip" onClick={() => void timers.toggle(main)}>
+                <Icon name={running ? "pause" : "play"} size={14} /> {t(running ? "timer.pause" : "timer.resume")}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="timer__text">
+                <div className="card__title">{t("home.timer.none")}</div>
+                <div className="card__sub">{t("home.timer.hint")}</div>
+              </div>
+              <button type="button" className="chip chip--butter home__chip" onClick={() => void timers.startPomodoro()}>
+                {t("home.timer.start")}
+              </button>
+            </>
+          )}
         </section>
 
         <section className="card favorites">
           <span className="card__title">{t("home.favorites")}</span>
-          <div className="favorites__tiles">
-            <span className="tile is-inert">
-              <Icon name="dl" size={18} />
-            </span>
-            <span className="tile tile--add is-inert">
-              <Icon name="plus" size={18} />
-            </span>
-          </div>
+          <Favorites downloads onAdd={() => setPicking(true)} />
         </section>
       </div>
+
+      {picking && (
+        <div className="home__sheet">
+          <AppsSheet onClose={() => setPicking(false)} />
+        </div>
+      )}
 
       <section className="card alert">
         <span className="alert__icon">

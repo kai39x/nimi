@@ -42,6 +42,23 @@
         "shadow": false,
         "center": true,
         "visible": false
+      },
+      {
+        "label": "picker",
+        "title": "NIMI",
+        "url": "index.html",
+        "width": 800,
+        "height": 600,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {

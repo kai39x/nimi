@@ -408,3 +408,24 @@
   font-weight: 600;
   color: var(--n-text);
 }
+
+/* Home: live timer chip and the favorites picker sheet (phase 7). */
+.home {
+  position: relative;
+}
+
+.home__chip {
+  gap: 6px;
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.home__sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}

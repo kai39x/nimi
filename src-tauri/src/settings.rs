@@ -103,6 +103,12 @@ fn apply_side_effects(app: &AppHandle, before: &Settings, after: &Settings) {
     if before.sounds_muted != after.sounds_muted {
         crate::tray::sync_mute(app);
     }
+    if before.command_hotkey != after.command_hotkey {
+        crate::hotkeys::set_mode(after.command_hotkey);
+    }
+    if before.clipboard_history && !after.clipboard_history {
+        crate::tools::clipboard::clear(app);
+    }
     if before.phish_feed != after.phish_feed {
         if after.phish_feed {
             crate::files::link::refresh_feed(app);

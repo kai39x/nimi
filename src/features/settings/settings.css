@@ -175,3 +175,48 @@
   font-size: var(--n-fs-caption);
   color: var(--n-muted);
 }
+
+/* «الاختصارات»: which fixed tiles show in the shortcuts tab. */
+.tile-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.tile-toggle {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  color: var(--n-muted);
+  font: inherit;
+  font-size: var(--n-fs-caption);
+  cursor: pointer;
+}
+
+.tile-toggle.is-on {
+  background: rgba(255, 231, 160, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 231, 160, 0.4);
+  color: var(--n-butter);
+  font-weight: 600;
+}
+
+.btn-ghost {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--n-fill-hover);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.row__buttons {
+  display: inline-flex;
+  gap: 6px;
+}

@@ -20,3 +20,5 @@ export const FEED_NIMI_SIZE = 130;
 export const FEED_NIMI_CENTER = { x: 270, y: 84 };
 /** The capsule while music plays: art · NIMI · equalizer · time (board 06/07 ①). */
 export const MUSIC_CAPSULE_WIDTH = 220;
+/** NIMI above the command bar (board 10). */
+export const COMMAND_NIMI_SIZE = 72;

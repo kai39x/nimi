@@ -1,24 +1,34 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AppHit } from "./generated/AppHit";
 import type { AppInfo } from "./generated/AppInfo";
 import type { BoostPlan } from "./generated/BoostPlan";
 import type { BoostPreview } from "./generated/BoostPreview";
 import type { BoostResult } from "./generated/BoostResult";
+import type { ClipItem } from "./generated/ClipItem";
 import type { FeedAction } from "./generated/FeedAction";
 import type { FeedResult } from "./generated/FeedResult";
 import type { FileActionResult } from "./generated/FileActionResult";
+import type { FileHit } from "./generated/FileHit";
 import type { HitRect } from "./generated/HitRect";
+import type { KnownFolder } from "./generated/KnownFolder";
 import type { Meal } from "./generated/Meal";
 import type { MediaArt } from "./generated/MediaArt";
 import type { MediaCommand } from "./generated/MediaCommand";
 import type { MediaState } from "./generated/MediaState";
+import type { MicState } from "./generated/MicState";
 import type { MonitorInfo } from "./generated/MonitorInfo";
 import type { OverlayVisibility } from "./generated/OverlayVisibility";
+import type { PickerSample } from "./generated/PickerSample";
 import type { PocketItem } from "./generated/PocketItem";
 import type { ScanProgress } from "./generated/ScanProgress";
 import type { ScanResult } from "./generated/ScanResult";
 import type { Settings } from "./generated/Settings";
 import type { SystemStats } from "./generated/SystemStats";
+import type { TimerKind } from "./generated/TimerKind";
+import type { TimerState } from "./generated/TimerState";
+import type { Tool } from "./generated/Tool";
 import type { TrayState } from "./generated/TrayState";
+import type { UserShortcut } from "./generated/UserShortcut";
 import type { VolumeState } from "./generated/VolumeState";
 
 /**
@@ -83,3 +93,31 @@ export const pocketCopy = (ids: string[]) => invoke<void>("pocket_copy", { ids }
 export const pocketRun = (action: FeedAction, ids: string[]) => invoke<FeedResult>("pocket_run", { action, ids });
 export const pocketDrag = (ids: string[]) => invoke<void>("pocket_drag", { ids });
 
+// Shortcuts, timer & command bar (phase 7)
+export const timerState = () => invoke<TimerState>("timer_state");
+export const timerStart = (kind: TimerKind, minutes: number, label: string | null = null) =>
+  invoke<TimerState>("timer_start", { kind, minutes, label });
+export const timerPause = (id: string) => invoke<TimerState>("timer_pause", { id });
+export const timerResume = (id: string) => invoke<TimerState>("timer_resume", { id });
+export const timerExtend = (id: string, minutes: number) => invoke<TimerState>("timer_extend", { id, minutes });
+export const timerStop = (id: string) => invoke<TimerState>("timer_stop", { id });
+export const clipList = () => invoke<ClipItem[]>("clip_list");
+export const clipCopy = (id: number) => invoke<void>("clip_copy", { id });
+export const clipRemove = (id: number) => invoke<ClipItem[]>("clip_remove", { id });
+export const clipClear = () => invoke<ClipItem[]>("clip_clear");
+export const toolRun = (tool: Tool) => invoke<void>("tool_run", { tool });
+export const micState = () => invoke<MicState>("mic_state");
+export const micToggle = () => invoke<MicState>("mic_toggle");
+export const pickerSample = () => invoke<PickerSample | null>("picker_sample");
+export const pickerPick = () => invoke<string | null>("picker_pick");
+export const pickerCancel = () => invoke<void>("picker_cancel");
+export const pickerFollow = () => invoke<void>("picker_follow");
+export const appsSearch = (query: string, limit: number) => invoke<AppHit[]>("apps_search", { query, limit });
+export const filesSearch = (query: string, limit: number) => invoke<FileHit[]>("files_search", { query, limit });
+export const launch = (target: string) => invoke<void>("launch", { target });
+export const openKnownFolder = (folder: KnownFolder) => invoke<void>("open_known_folder", { folder });
+export const runUserShortcut = (shortcut: UserShortcut) => invoke<void>("run_user_shortcut", { shortcut });
+export const zipExplorerSelection = () => invoke<FeedResult>("zip_explorer_selection");
+export const commandBarOpened = () => invoke<void>("command_bar_opened");
+export const pickScreenshotFolder = () => invoke<string | null>("pick_screenshot_folder");
+export const screenshotDefaultFolder = () => invoke<string | null>("screenshot_default_folder");

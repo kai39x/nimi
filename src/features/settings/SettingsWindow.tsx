@@ -4,7 +4,8 @@ import nimiIdle from "@design/character/svg/nimi_idle.svg";
 import { Icon, type IconName } from "@/components/Icon";
 import { Segmented, Slider, Toggle } from "@/components/controls";
 import { useT, type TKey } from "@/i18n";
-import { listMonitors } from "@/ipc/commands";
+import { clipClear, listMonitors, pickScreenshotFolder, screenshotDefaultFolder } from "@/ipc/commands";
+import type { TileId } from "@/ipc/generated/TileId";
 import type { CapsuleStyle } from "@/ipc/generated/CapsuleStyle";
 import type { MonitorInfo } from "@/ipc/generated/MonitorInfo";
 import type { Settings } from "@/ipc/generated/Settings";
@@ -12,9 +13,10 @@ import { updateSettings, useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
 import { Nimi } from "@/features/character/Nimi";
 import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
+import { ALL_TILES } from "@/features/shortcuts/ShortcutsTab";
 import "./settings.css";
 
-type SectionId = "general" | "character" | "capsule" | "feed";
+type SectionId = "general" | "character" | "capsule" | "feed" | "shortcuts";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
@@ -23,7 +25,7 @@ const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: 
   { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: false },
   { id: "feed", icon: "pocket", label: "settings.section.feed", ready: true },
   { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: false },
-  { id: "shortcuts", icon: "keyboard", label: "settings.section.shortcuts", ready: false },
+  { id: "shortcuts", icon: "keyboard", label: "settings.section.shortcuts", ready: true },
   { id: "privacy", icon: "shield", label: "settings.section.privacy", ready: false },
   { id: "about", icon: "info", label: "settings.section.about", ready: false },
 ];
@@ -73,6 +75,8 @@ export function SettingsWindow() {
   const settings = useSettings();
   const t = useT();
   const [section, setSection] = useState<SectionId>("general");
+  const [shotDefault, setShotDefault] = useState<string | null>(null);
+  useEffect(() => void screenshotDefaultFolder().then(setShotDefault), []);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
 
   useEffect(() => {
@@ -272,6 +276,86 @@ export function SettingsWindow() {
               </Row>
               <Row title={t("settings.deleteTo")} sub={t("settings.deleteTo.sub")}>
                 <Toggle label={t("settings.deleteTo")} checked disabled onChange={() => {}} />
+              </Row>
+            </section>
+          )}
+          {section === "shortcuts" && (
+            <section className="settings__content">
+              <Row title={t("settings.hotkey")} sub={t("settings.hotkey.sub")}>
+                <Segmented
+                  label={t("settings.hotkey")}
+                  value={settings.commandHotkey}
+                  options={[
+                    { value: "doubleCtrl", label: "Ctrl ×2" },
+                    { value: "doubleAlt", label: "Alt ×2" },
+                    { value: "doubleShift", label: "Shift ×2" },
+                    { value: "off", label: t("settings.off") },
+                  ]}
+                  onChange={(commandHotkey) => void updateSettings({ commandHotkey })}
+                />
+              </Row>
+              <Row title={t("settings.tiles")} sub={t("settings.tiles.sub")}>
+                <div className="tile-toggles">
+                  {ALL_TILES.map((id: TileId) => {
+                    const on = settings.tiles.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className={"tile-toggle" + (on ? " is-on" : "")}
+                        aria-pressed={on}
+                        onClick={() =>
+                          void updateSettings({
+                            // Shown again at its board position among the visible ones.
+                            tiles: on ? settings.tiles.filter((x) => x !== id) : ALL_TILES.filter((x) => x === id || settings.tiles.includes(x)),
+                          })
+                        }
+                      >
+                        {t(`tile.${id}` as TKey)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Row>
+              <Row title={t("settings.shotSave")} sub={t("settings.shotSave.sub")}>
+                <Segmented
+                  label={t("settings.shotSave")}
+                  value={settings.screenshotSave}
+                  options={[
+                    { value: "ask", label: t("settings.shotSave.ask") },
+                    { value: "folder", label: t("settings.shotSave.folder") },
+                    { value: "clipboardOnly", label: t("settings.shotSave.clipboard") },
+                  ]}
+                  onChange={(screenshotSave) => void updateSettings({ screenshotSave })}
+                />
+              </Row>
+              {settings.screenshotSave !== "clipboardOnly" && (
+                <Row title={t("settings.shotFolder")} sub={settings.screenshotFolder || shotDefault || ""}>
+                  <span className="row__buttons">
+                    {settings.screenshotFolder && (
+                      <button type="button" className="btn-ghost" onClick={() => void updateSettings({ screenshotFolder: "" })}>
+                        {t("settings.shotFolder.reset")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() =>
+                        void pickScreenshotFolder().then((dir) => (dir ? updateSettings({ screenshotFolder: dir }) : undefined))
+                      }
+                    >
+                      {t("settings.shotFolder.pick")}
+                    </button>
+                  </span>
+                </Row>
+              )}
+              <Row title={t("settings.clipboard")} sub={t("settings.clipboard.sub")}>
+                <Toggle label={t("settings.clipboard")} checked={settings.clipboardHistory} onChange={(clipboardHistory) => void updateSettings({ clipboardHistory })} />
+              </Row>
+              <Row title={t("settings.clipboard.clear")} sub={t("settings.clipboard.clear.sub")}>
+                <button type="button" className="btn-ghost" onClick={() => void clipClear()}>
+                  {t("clip.clear")}
+                </button>
               </Row>
             </section>
           )}

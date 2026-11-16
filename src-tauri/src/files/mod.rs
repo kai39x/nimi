@@ -13,7 +13,7 @@
 //! the Recycle Bin, a moved file moves back; system paths are refused.
 
 pub mod drop;
-mod imaging;
+pub mod imaging;
 pub mod link;
 mod ocr;
 mod pdf;

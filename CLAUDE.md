@@ -43,7 +43,8 @@ src-tauri/src/
   ipc.rs                     every command/event payload type (derive Serialize + TS)
   window/                    placement, hittest (click-through), fullscreen, monitors
   tray.rs · settings.rs      (phase 1 / 10)
-  media/ system/ files/ hotkeys/ notifications/      (phases 4–8)
+  media/ system/ files/ tools/ hotkeys.rs notifications/      (phases 4–8; tools = timer, clipboard,
+                             mic, color picker, apps, file find, Explorer selection)
 design/                      the approved design package — read-only, imported directly by the frontend
 docs/                        PLAN.md (architecture of the risky parts), evidence/ (phase screenshots)
 scripts/                     screenshot.ps1 (DPI-aware capture), cdp.py (drive a webview over CDP), cdp_trace.py (perf trace), drag-file.ps1 (real OLE drag)
@@ -59,5 +60,6 @@ scripts/                     screenshot.ps1 (DPI-aware capture), cdp.py (drive a
 - **Shell & panel**: `features/shell/Shell.tsx` owns compact/expanded state, the hit rect, the mood machine and the morph (`constants.ts` has the sizes); `features/panel/` renders the header, `TabBar` and tabs. Other tabs land in their phases; until then they show the approved «يجي قريب» placeholder. Open = `setOverlayExpanded(true)` + `focusOverlay(true)` (Rust then reports clicks outside and the window may take keyboard focus); close reverses both.
 - **Performance budget**: idle CPU < 1 %; system stats every 2 s with the panel open, 10 s when compact; pause all animation and timers while hidden.
 - **Dev-only switches** (debug builds): `NIMI_DEV_SKIP=clickthrough,subclass,hittest,fullscreen` disables parts of the overlay setup; the `dev_window_flags` command flips window styles at runtime. Both exist to bisect Win32 behaviour with `scripts/cdp.py`.
+- **Shell requests**: other features open the command bar, run a screen tool or flash a pill through `features/shell/actions.ts` (`shellActions`), never by reaching into `Shell.tsx`.
 - **Window rules learned the hard way** (see docs/PLAN.md "What phase 1 taught us"): never `focus: false` on a window that must accept file drops; secondary windows are declared in `tauri.conf.json`, created hidden, and only shown/hidden at runtime.
 - **Before calling a phase done**: `npm run typecheck`, `npm run rust:clippy`, run the app, capture screenshot/video evidence, and review the diff against that phase's spec section. Phase-end commits start with `phase N:`.

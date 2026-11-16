@@ -1,0 +1,755 @@
+/* «اختصارات» tab (spec §5, board 13). The panel is a little taller on this tab (shell--tall). */
+.shell--panel.shell--tall {
+  height: 668px;
+}
+
+.sc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+/* --- fixed tiles: 4 × 2, icon at the start corner, label under it, shortcut badge at the end -- */
+.sc__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.sc-tile {
+  position: relative;
+  height: 70px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--n-r-tile);
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  color: var(--n-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition:
+    background var(--n-dur-press) var(--n-ease),
+    transform var(--n-dur-press) var(--n-ease-out),
+    box-shadow var(--n-dur-press) var(--n-ease);
+  touch-action: none;
+  user-select: none;
+}
+
+.sc-tile:hover {
+  background: var(--n-fill-hover);
+}
+
+.sc-tile:active {
+  transform: scale(0.98);
+}
+
+.sc-tile.is-on {
+  background: rgba(255, 155, 155, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 155, 155, 0.35);
+}
+
+.sc-tile.is-on .sc-tile__icon {
+  color: var(--n-danger);
+}
+
+.sc-tile.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.97);
+}
+
+.sc-tile.is-target:hover {
+  box-shadow: inset 0 0 0 1.5px rgba(255, 231, 160, 0.6);
+}
+
+.sc-tile__label {
+  font-size: var(--n-fs-body);
+  font-weight: 600;
+}
+
+.sc-tile__badge {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 12px;
+  padding: 2px 7px;
+  border-radius: var(--n-r-kbd);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--n-muted);
+  font-size: 10.5px;
+}
+
+.sc-tile__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 6;
+  min-width: 140px;
+  padding: 6px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pill-in 160ms var(--n-ease-spring) both;
+}
+
+.sc-tile__menu-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: var(--n-fs-label);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sc-tile__menu-item:hover {
+  background: var(--n-fill-hover);
+}
+
+/* --- favorites ------------------------------------------------------------------------------- */
+.sc__favs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--n-s3);
+  padding: 9px var(--n-s4);
+}
+
+.favs {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--n-s2);
+}
+
+.favs__slot {
+  position: relative;
+}
+
+.favs__menu {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+.fav-tile {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--n-r-button);
+  color: #1c1830;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--n-dur-press) var(--n-ease-out);
+}
+
+.fav-tile:hover {
+  transform: translateY(-2px);
+}
+
+.fav-tile--sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 13px;
+  cursor: inherit;
+}
+
+.fav-tile--peri {
+  background: var(--n-peri);
+}
+
+.fav-tile--mint {
+  background: var(--n-ok);
+}
+
+.fav-tile--rose {
+  background: var(--n-rose);
+}
+
+.fav-tile--butter {
+  background: var(--n-butter);
+}
+
+.fav-tile--mist {
+  background: var(--n-mist);
+}
+
+button.tile {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.tile--add {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+/* --- bottom row: your shortcuts (start) + Pomodoro (end) --------------------------------------- */
+.sc__bottom {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sc__user {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px var(--n-s4) 6px;
+}
+
+.sc__user-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.sc__user-head .chip,
+.sc-sheet .chip,
+.pomo .chip {
+  gap: 6px;
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-text);
+  cursor: pointer;
+}
+
+.chip.chip--butter {
+  color: var(--n-butter);
+}
+
+.sc__user-empty {
+  margin: auto 0;
+  padding: var(--n-s3) 0;
+  color: var(--n-muted);
+  font-size: var(--n-fs-label);
+  line-height: 1.6;
+}
+
+.sc__user-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.sc__user-row {
+  display: flex;
+  align-items: center;
+  gap: var(--n-s2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--n-line);
+}
+
+.sc__user-row:last-child {
+  border-bottom: 0;
+}
+
+.sc__user-run {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--n-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.sc__user-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(180, 192, 255, 0.14);
+  color: var(--n-peri);
+}
+
+.sc__user-name {
+  font-size: var(--n-fs-label);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sc__kind {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  font-size: 11px;
+  color: var(--n-muted);
+}
+
+.sc__edit {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+
+/* --- Pomodoro ring --------------------------------------------------------------------------- */
+.pomo {
+  display: flex;
+  align-items: center;
+  gap: var(--n-s5);
+  padding: var(--n-s4) var(--n-s5);
+}
+
+.pomo__side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pomo__rounds {
+  display: flex;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.pomo__rounds span {
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pomo__rounds .is-done,
+.pomo__rounds .is-now {
+  background: var(--n-butter);
+}
+
+.pomo__rounds .is-now {
+  opacity: 0.6;
+}
+
+.pomo__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--n-s2);
+  margin-top: 6px;
+}
+
+.pomo__play {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  cursor: pointer;
+}
+
+.pomo__btn {
+  width: 40px;
+  height: 40px;
+}
+
+.pomo__plus {
+  height: 40px;
+}
+
+.pomo__reminder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
+
+.pomo__reminder-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--n-text);
+}
+
+.pomo__reminder-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.pomo__reminder-x {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--n-muted);
+  cursor: pointer;
+}
+
+.pomo__reminder-x:hover {
+  background: var(--n-fill-hover);
+  color: var(--n-text);
+}
+
+.ring {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.ring__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 7;
+}
+
+.ring__arc {
+  fill: none;
+  stroke: var(--n-butter);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms linear;
+}
+
+.ring.is-break .ring__arc {
+  stroke: var(--n-ok);
+}
+
+.ring.is-paused .ring__arc {
+  opacity: 0.45;
+}
+
+.ring__time {
+  position: relative;
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  line-height: 1.1;
+}
+
+.ring__label {
+  position: relative;
+  font-size: 11px;
+  color: var(--n-muted);
+}
+
+/* --- sheets over the tab --------------------------------------------------------------------- */
+.sc__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  background: rgba(6, 6, 8, 0.35);
+  border-radius: inherit;
+}
+
+.sc__scrim--clear {
+  background: transparent;
+}
+
+.sc-sheet {
+  position: absolute;
+  z-index: 5;
+  inset: 0 6% 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s3);
+  padding: var(--n-s4) var(--n-s5);
+  border-radius: var(--n-r-card);
+  animation: pill-in 180ms var(--n-ease-spring) both;
+}
+
+.sc-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sc-sheet__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--n-s2);
+}
+
+.sc-sheet__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--n-s3);
+  margin: auto;
+  color: var(--n-muted);
+  text-align: center;
+  font-size: var(--n-fs-label);
+}
+
+.sc-sheet__note {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
+
+.sc-clips {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sc-clip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--n-s2);
+}
+
+.sc-clip__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-label);
+  text-align: start;
+  cursor: pointer;
+}
+
+.sc-clip__text bdi {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sc-clip__text:hover {
+  background: var(--n-fill-hover);
+}
+
+.sc-clip__meta {
+  font-size: 11px;
+  color: var(--n-muted);
+}
+
+.sc-clip__x {
+  width: 28px;
+  height: 28px;
+  margin-top: 6px;
+}
+
+.apps-picker {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s2);
+}
+
+.apps-picker__field {
+  height: 44px;
+}
+
+.apps-picker__input {
+  font-size: var(--n-fs-body);
+}
+
+.apps-picker__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 4px;
+}
+
+.apps-picker__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-label);
+  text-align: start;
+  cursor: pointer;
+}
+
+.apps-picker__row:hover:not(:disabled) {
+  background: var(--n-fill-hover);
+}
+
+.apps-picker__row.is-on {
+  color: var(--n-muted);
+  cursor: default;
+}
+
+.apps-picker__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s3);
+}
+
+.sc-form__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--n-fs-label);
+  color: var(--n-muted);
+}
+
+.sc-input {
+  height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-body);
+  outline: none;
+}
+
+.sc-input:focus {
+  box-shadow: inset 0 0 0 1px rgba(255, 231, 160, 0.5);
+}
+
+.sc-form__note {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+  line-height: 1.6;
+}
+
+.sc-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--n-s2);
+}
+
+.sc-form__delete {
+  margin-inline-end: auto;
+  color: var(--n-danger) !important;
+}
+
+/* --- timer in the capsule (board 13 note: «المؤقت الشغال يطلع … في الكبسولة») ----------------- */
+.shell--capsule.shell--timer {
+  width: calc(220px * var(--nimi-scale));
+}
+
+.shell--timer .shell__nimi {
+  left: calc(50% - 16px * var(--nimi-scale));
+}
+
+.peek-strip--timer {
+  width: calc(220px * var(--nimi-scale));
+}
+
+.timer-capsule {
+  position: absolute;
+  inset: 0;
+  direction: ltr;
+  pointer-events: none;
+  animation: music-in 240ms var(--n-ease-out) 120ms both;
+}
+
+.timer-capsule__ring {
+  position: absolute;
+  left: calc(14px * var(--nimi-scale));
+  top: 50%;
+  translate: 0 -50%;
+  width: calc(28px * var(--nimi-scale));
+  height: calc(28px * var(--nimi-scale));
+  display: grid;
+  place-items: center;
+  color: var(--n-butter);
+}
+
+.timer-capsule__ring > svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+
+
+.timer-capsule__time {
+  position: absolute;
+  right: calc(16px * var(--nimi-scale));
+  top: 50%;
+  translate: 0 -50%;
+  font-size: calc(13px * var(--nimi-scale));
+  font-weight: 600;
+  color: var(--n-butter);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-capsule.is-paused .timer-capsule__time {
+  color: var(--n-muted);
+}
+
+.timer-capsule.is-break .timer-capsule__ring,
+.timer-capsule.is-break .timer-capsule__time {
+  color: var(--n-ok);
+}
+
+[dir="rtl"] .apps-picker__name,
+[dir="rtl"] .sc-clip__text bdi {
+  text-align: right;
+}

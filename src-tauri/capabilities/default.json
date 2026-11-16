@@ -4,7 +4,8 @@
   "description": "Permissions granted to the NIMI windows.",
   "windows": [
     "overlay",
-    "settings"
+    "settings",
+    "picker"
   ],
   "permissions": [
     "core:default",

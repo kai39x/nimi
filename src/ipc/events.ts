@@ -16,6 +16,13 @@ export const Events = {
   systemScan: "nimi://system/scan",
   pocketChanged: "nimi://pocket/changed",
   drop: "nimi://drop",
+  commandOpen: "nimi://command/open",
+  timerState: "nimi://timer/state",
+  timerDone: "nimi://timer/done",
+  clipboardChanged: "nimi://clipboard/changed",
+  pickerDone: "nimi://picker/done",
+  pickerOpen: "nimi://picker/open",
+  screenshotSaved: "nimi://screenshot/saved",
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

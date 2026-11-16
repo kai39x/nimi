@@ -16,6 +16,7 @@ use crate::{
     pocket,
     settings::SettingsStore,
     system::{self, SystemShared},
+    tools,
     window::{self, OverlayState},
 };
 
@@ -37,6 +38,18 @@ pub mod events {
     pub const POCKET_CHANGED: &str = "nimi://pocket/changed";
     /// [`DropEvent`]: OS drag-and-drop over the overlay (files, links, text).
     pub const DROP: &str = "nimi://drop";
+    /// The command-bar hotkey fired (double Ctrl by default).
+    pub const COMMAND_OPEN: &str = "nimi://command/open";
+    /// [`TimerState`] after any change.
+    pub const TIMER_STATE: &str = "nimi://timer/state";
+    /// [`TimerDone`]: a stretch ended.
+    pub const TIMER_DONE: &str = "nimi://timer/done";
+    /// `Vec<ClipItem>` after the clipboard history changed.
+    pub const CLIPBOARD_CHANGED: &str = "nimi://clipboard/changed";
+    /// `Option<String>`: the color picker closed with this hex (copied), or cancelled.
+    pub const PICKER_DONE: &str = "nimi://picker/done";
+    /// `{ Ok: path } | { Err: code }`: a screenshot taken through NIMI was saved (or failed).
+    pub const SCREENSHOT_SAVED: &str = "nimi://screenshot/saved";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -105,6 +118,20 @@ pub struct Settings {
     /// «فحص الروابط بقائمة OpenPhish»: download the public phishing list once a day and check
     /// dropped links against it locally. Off by default: NIMI stays offline unless asked.
     pub phish_feed: bool,
+    /// «شريط الأوامر»: the key tapped twice to open the command bar (spec §8).
+    pub command_hotkey: CommandHotkey,
+    /// The fixed tiles of the shortcuts tab, in the user's order; a missing one is hidden.
+    pub tiles: Vec<TileId>,
+    /// «برامجك المفضلة»: apps (or files / folders) pinned to the shortcuts tab and Home.
+    pub favorites: Vec<Favorite>,
+    /// «اختصاراتك»: open a folder, run a command, open a URL. Each is a command-bar command too.
+    pub user_shortcuts: Vec<UserShortcut>,
+    /// «سجل الحافظة»: NIMI remembers the last copied texts (in memory only, never on disk).
+    pub clipboard_history: bool,
+    /// «وين تنحفظ اللقطة»: what happens to a screenshot taken through NIMI.
+    pub screenshot_save: ScreenshotSave,
+    /// The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
+    pub screenshot_folder: String,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
     #[ts(type = "number")]
     pub first_run_ms: u64,
@@ -129,6 +156,13 @@ impl Default for Settings {
             results_location: ResultsLocation::NextToOriginal,
             pocket_empty: PocketEmpty::Day,
             phish_feed: false,
+            command_hotkey: CommandHotkey::DoubleCtrl,
+            tiles: TileId::ALL.to_vec(),
+            favorites: Vec::new(),
+            user_shortcuts: Vec::new(),
+            clipboard_history: true,
+            screenshot_save: ScreenshotSave::Ask,
+            screenshot_folder: String::new(),
             first_run_ms: 0,
         }
     }
@@ -1045,6 +1079,415 @@ pub fn pocket_drag(
 ) -> Result<(), String> {
     let paths = pocket::paths(&app, &ids);
     files::shell::drag_out(&app, files.inner().clone(), paths)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Shortcuts, timer and the command bar (phase 7, spec §5 «اختصارات» and §8, boards 10 and 13)
+
+/// Which key, tapped twice, opens the command bar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum CommandHotkey {
+    #[default]
+    DoubleCtrl,
+    DoubleAlt,
+    DoubleShift,
+    Off,
+}
+
+/// «وين تنحفظ اللقطة» (Kai's note on phase 7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ScreenshotSave {
+    /// A save dialog every time.
+    #[default]
+    Ask,
+    /// Straight into `screenshot_folder`.
+    Folder,
+    /// Only on the clipboard (Windows' default).
+    ClipboardOnly,
+}
+
+/// The eight fixed tiles of the shortcuts tab (board 13).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TileId {
+    Screenshot,
+    Timer,
+    Downloads,
+    ColorPicker,
+    MicMute,
+    Lock,
+    Clipboard,
+    CommandBar,
+}
+
+impl TileId {
+    /// Board order (reading order in Arabic: right to left, top row first).
+    pub const ALL: [TileId; 8] = [
+        TileId::Screenshot,
+        TileId::Timer,
+        TileId::Downloads,
+        TileId::ColorPicker,
+        TileId::MicMute,
+        TileId::Lock,
+        TileId::Clipboard,
+        TileId::CommandBar,
+    ];
+}
+
+/// A pinned app: `target` is an Apps-folder id (`shell:AppsFolder\…`) or a file / folder path.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Favorite {
+    pub id: String,
+    pub name: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ShortcutKind {
+    /// Opens a folder in Explorer.
+    Folder,
+    /// Runs a command line in a new console window (scripts too: `powershell -File x.ps1`).
+    Command,
+    /// Opens an http(s) URL in the default browser.
+    Url,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UserShortcut {
+    pub id: String,
+    pub name: String,
+    pub kind: ShortcutKind,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TimerKind {
+    /// A plain countdown («مؤقت ٢٥ دقيقة»).
+    Timer,
+    /// 25 min work + 5 min break, 4 rounds.
+    Pomodoro,
+    /// «ذكّرني بعد ١٠ دقايق …»: a countdown with a note; several can run at once.
+    Reminder,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TimerPhase {
+    Work,
+    Break,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TimerInfo {
+    pub id: String,
+    pub kind: TimerKind,
+    pub label: Option<String>,
+    /// Unix ms when the current stretch ends (meaningless while paused).
+    #[ts(type = "number")]
+    pub ends_at_ms: i64,
+    /// Length of the current stretch (for the ring).
+    #[ts(type = "number")]
+    pub total_ms: i64,
+    /// Set while paused: what was left.
+    #[ts(type = "number | null")]
+    pub paused_left_ms: Option<i64>,
+    /// Pomodoro: 1-based round and the round count; 1 / 1 otherwise.
+    pub round: u32,
+    pub rounds: u32,
+    pub phase: TimerPhase,
+}
+
+/// One main countdown (timer or Pomodoro; a new one replaces it) plus any reminders.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TimerState {
+    pub main: Option<TimerInfo>,
+    pub reminders: Vec<TimerInfo>,
+}
+
+/// A stretch ended: a timer / reminder finished, or a Pomodoro switched phase or finished.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TimerDone {
+    pub kind: TimerKind,
+    pub label: Option<String>,
+    /// Pomodoro: the phase that starts now (ignored when `finished`).
+    pub phase: TimerPhase,
+    pub round: u32,
+    pub rounds: u32,
+    pub finished: bool,
+}
+
+#[tauri::command]
+pub fn timer_state(app: AppHandle) -> TimerState {
+    tools::timer::state(&app)
+}
+
+#[tauri::command]
+pub fn timer_start(
+    app: AppHandle,
+    kind: TimerKind,
+    minutes: f64,
+    label: Option<String>,
+) -> Result<TimerState, String> {
+    tools::timer::start(&app, kind, minutes, label)
+}
+
+#[tauri::command]
+pub fn timer_pause(app: AppHandle, id: String) -> TimerState {
+    tools::timer::pause(&app, &id)
+}
+
+#[tauri::command]
+pub fn timer_resume(app: AppHandle, id: String) -> TimerState {
+    tools::timer::resume(&app, &id)
+}
+
+/// «+٥ د».
+#[tauri::command]
+pub fn timer_extend(app: AppHandle, id: String, minutes: f64) -> TimerState {
+    tools::timer::extend(&app, &id, minutes)
+}
+
+#[tauri::command]
+pub fn timer_stop(app: AppHandle, id: String) -> TimerState {
+    tools::timer::stop(&app, &id)
+}
+
+/// A copied text NIMI remembers («سجل الحافظة»). Memory only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ClipItem {
+    #[ts(type = "number")]
+    pub id: u64,
+    pub text: String,
+    #[ts(type = "number")]
+    pub at_ms: i64,
+}
+
+#[tauri::command]
+pub fn clip_list(app: AppHandle) -> Vec<ClipItem> {
+    tools::clipboard::list(&app)
+}
+
+/// Puts an old entry back on the clipboard (it moves to the top).
+#[tauri::command]
+pub fn clip_copy(app: AppHandle, id: u64) -> Result<(), String> {
+    tools::clipboard::copy(&app, id)
+}
+
+#[tauri::command]
+pub fn clip_remove(app: AppHandle, id: u64) -> Vec<ClipItem> {
+    tools::clipboard::remove(&app, id)
+}
+
+/// «مسح سجل الحافظة».
+#[tauri::command]
+pub fn clip_clear(app: AppHandle) -> Vec<ClipItem> {
+    tools::clipboard::clear(&app)
+}
+
+/// One-shot tools behind the tiles and the command bar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Tool {
+    /// Windows' own region snip (Win+Shift+S).
+    Screenshot,
+    /// Locks the PC (Win+L).
+    Lock,
+    /// The color picker over the screen; the hex goes to the clipboard.
+    ColorPicker,
+}
+
+#[tauri::command]
+pub fn tool_run(app: AppHandle, tool: Tool) -> Result<(), String> {
+    tools::run(&app, tool)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MicState {
+    pub available: bool,
+    pub muted: bool,
+}
+
+#[tauri::command]
+pub async fn mic_state() -> MicState {
+    tauri::async_runtime::spawn_blocking(tools::mic::state)
+        .await
+        .unwrap_or_default()
+}
+
+/// «كتم المايك»: toggles the default microphone; returns the new state.
+#[tauri::command]
+pub async fn mic_toggle() -> Result<MicState, String> {
+    tauri::async_runtime::spawn_blocking(tools::mic::toggle)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// The color picker samples an 11×11 square around the cursor (RGB bytes, row by row).
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PickerSample {
+    pub hex: String,
+    pub size: u32,
+    pub rgb: Vec<u8>,
+}
+
+#[tauri::command]
+pub fn picker_sample() -> Option<PickerSample> {
+    tools::picker::sample()
+}
+
+/// Click in the picker: copy the color under the cursor and close.
+#[tauri::command]
+pub fn picker_pick(app: AppHandle) -> Option<String> {
+    tools::picker::pick(&app)
+}
+
+#[tauri::command]
+pub fn picker_cancel(app: AppHandle) {
+    tools::picker::close(&app, None);
+}
+
+/// The cursor left the picker's monitor: move the picker to the monitor under the cursor.
+#[tauri::command]
+pub fn picker_follow(app: AppHandle) {
+    tools::picker::follow(&app);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum KnownFolder {
+    Downloads,
+    Documents,
+    Desktop,
+    Pictures,
+    Videos,
+    Music,
+}
+
+/// An app from Windows' Apps folder (Start menu apps, Store apps, Settings…).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AppHit {
+    pub name: String,
+    /// `shell:AppsFolder\…`, passed back to `launch`.
+    pub target: String,
+}
+
+/// Fuzzy app search for «افتح» and the favorites picker; an empty query lists every app.
+#[tauri::command]
+pub async fn apps_search(query: String, limit: u32) -> Vec<AppHit> {
+    tauri::async_runtime::spawn_blocking(move || tools::apps::search(&query, limit as usize))
+        .await
+        .unwrap_or_default()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FileHit {
+    pub name: String,
+    pub path: String,
+    #[ts(type = "number")]
+    pub size: u64,
+    pub is_dir: bool,
+    /// The user folder it lives under (for «المستندات»), `None` elsewhere.
+    pub folder: Option<KnownFolder>,
+    #[ts(type = "number")]
+    pub modified_ms: i64,
+}
+
+/// «دوّر»: file names under the user's folders (an index built in the background).
+#[tauri::command]
+pub async fn files_search(query: String, limit: u32) -> Vec<FileHit> {
+    tauri::async_runtime::spawn_blocking(move || tools::find::search(&query, limit as usize))
+        .await
+        .unwrap_or_default()
+}
+
+/// Opens an app id, a file or a folder with the shell.
+#[tauri::command]
+pub fn launch(target: String) -> Result<(), String> {
+    tools::launch(&target)
+}
+
+#[tauri::command]
+pub fn open_known_folder(folder: KnownFolder) -> Result<(), String> {
+    let path = tools::known_folder(folder).ok_or("no-folder")?;
+    tools::launch(&path.to_string_lossy())
+}
+
+#[tauri::command]
+pub fn run_user_shortcut(shortcut: UserShortcut) -> Result<(), String> {
+    tools::run_shortcut(&shortcut)
+}
+
+/// «ضغط»: one ZIP of the files selected in the Explorer window that was in front when the
+/// command bar opened. Same result and undo as feeding.
+#[tauri::command]
+pub async fn zip_explorer_selection(app: AppHandle) -> Result<FeedResult, String> {
+    let origin = window::state(&app)
+        .origin
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let paths = tauri::async_runtime::spawn_blocking(move || tools::explorer::selection(origin))
+        .await
+        .map_err(|e| e.to_string())??;
+    tauri::async_runtime::spawn_blocking(move || {
+        files::run(&app, FeedAction::Zip, &paths, None, None)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// «اختر مجلد» for screenshots; `None` when cancelled.
+#[tauri::command]
+pub async fn pick_screenshot_folder(app: AppHandle) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let start = tools::screenshot::default_folder();
+        files::shell::pick_folder(&app, start.as_deref()).map(|p| p.to_string_lossy().into_owned())
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// `Pictures\Screenshots`, shown when no folder is chosen.
+#[tauri::command]
+pub fn screenshot_default_folder() -> Option<String> {
+    tools::screenshot::default_folder().map(|p| p.to_string_lossy().into_owned())
+}
+
+/// The command bar opened: warm the app list and the file index in the background.
+#[tauri::command]
+pub fn command_bar_opened() {
+    tools::warm();
 }
 
 // ---------------------------------------------------------------------------------------------

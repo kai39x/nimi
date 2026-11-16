@@ -186,6 +186,31 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 - A background job must also switch peek off, or the capsule rises and the working face and pill
   are gone — exactly what Kai saw.
 
+### What phase 7 taught us (shortcuts, timer, command bar)
+
+- **Double Ctrl from the background needs the foreground lock lifted.** `set_focus()` alone is
+  refused when the hotkey (not a click) opens the bar; `window::foreground::force` joins the
+  foreground thread's input queue (`AttachThreadInput`) for the `SetForegroundWindow` call. The
+  input then gets focus on the window's own `focus` event (timers alone race it).
+- **The low-level hook is blind to keys typed into NIMI itself.** While the bar has focus the
+  second double-Ctrl never reaches `hotkeys.rs`, so the bar watches for it in the page.
+- **Dragging "into the panel" can't work:** a drag starts with a mouse press outside the panel,
+  which is a click outside, which closes it. Apps get pinned by feeding them to NIMI instead
+  («للمفضلة» bubble for `.exe` / `.lnk`).
+- **Color picker:** a window over one monitor excluded from capture
+  (`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, Win10 2004+), so GDI `BitBlt` of the
+  screen reads what is under it; screenshots of it need CDP `Page.captureScreenshot`.
+- **Timers live in Rust** (one thread, `Condvar::wait_timeout` to the nearest deadline): the
+  overlay's own timers pause while it is hidden.
+- **App list = `shell:AppsFolder`** (`FOLDERID_AppsFolder` + `BHID_EnumItems`): every Start-menu
+  and Store app with a launchable id, in one enumeration (~1 s, cached 10 min).
+- **File search walks the user folders** (capped at 250 000 entries ≈ 3.5 s on Kai's PC, paths
+  only, dropped after 10 idle minutes). The Windows Search index would be faster but needs OLE DB.
+- **Clipboard history** skips content marked `ExcludeClipboardContentFromMonitorProcessing` /
+  `CanIncludeInClipboardHistory = 0` (password managers) and stays in memory.
+- CSS order between feature files is not guaranteed: a shell mode in another file needs
+  `.shell.shell--x` to beat `.shell { border-radius: 999px }`.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One
@@ -210,8 +235,9 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 
 ## 4. Other decisions worth stating now
 
-- **Double-Ctrl**: `WH_KEYBOARD_LL` on its own thread with a message loop. Two Ctrl taps within 350 ms, each held
-  < 200 ms, no other key in between. Keys are never swallowed.
+- **Double-Ctrl** (built in phase 7, `hotkeys.rs`): `WH_KEYBOARD_LL` on its own thread with a message loop. Two
+  taps within 400 ms, each held ≤ 300 ms, no other key in between; Ctrl, Alt or Shift by setting. Keys are never
+  swallowed.
 - **Recycle Bin**: `trash` crate (`IFileOperation` with `FOF_ALLOWUNDO`). No code path deletes permanently.
 - **Autostart**: `tauri-plugin-autostart` (HKCU Run key, current exe path — works for the portable exe too).
 - **Single instance**: `tauri-plugin-single-instance`; a second launch just shows the overlay.

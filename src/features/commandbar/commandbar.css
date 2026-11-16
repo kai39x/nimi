@@ -1,0 +1,194 @@
+/* Command bar (spec §8, board 10): a 620 px glass bar under NIMI. The shell takes its height from
+   the content (CommandBar reports it); rows are 58 px, the active one butter-tinted. */
+.shell.shell--command {
+  top: calc(var(--capsule-top) + 100px);
+  width: 620px;
+  border-radius: 28px;
+}
+
+.shell.shell--command .shell__nimi {
+  top: 0;
+  margin-top: -52px;
+}
+
+.cmd {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s2);
+  padding: 14px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--n-dur-content) var(--n-ease-out),
+    visibility 0s linear var(--n-dur-content);
+}
+
+.cmd.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--n-dur-content) var(--n-ease-out) var(--n-delay-content),
+    visibility 0s linear var(--n-delay-content);
+}
+
+.cmd__field {
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  height: 52px;
+  padding: 0 var(--n-s4);
+  border-radius: 16px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+  cursor: text;
+}
+
+.cmd__glass {
+  color: var(--n-muted);
+  flex: none;
+}
+
+.cmd__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--n-text);
+  font: inherit;
+  font-size: 19px;
+  caret-color: var(--n-butter);
+}
+
+[dir="rtl"] .cmd__input {
+  text-align: right;
+}
+
+.cmd__input::placeholder {
+  color: var(--n-muted);
+  opacity: 0.7;
+}
+
+.kbd {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--n-r-kbd);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--n-muted);
+  font-size: 11px;
+  font-weight: 500;
+  direction: ltr;
+}
+
+.cmd__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.cmd__row {
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  min-height: 58px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: background var(--n-dur-press) var(--n-ease);
+}
+
+.cmd__row.is-active {
+  background: rgba(255, 231, 160, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 231, 160, 0.38);
+}
+
+.cmd__row.is-info {
+  cursor: default;
+}
+
+.cmd__row.is-info.is-active {
+  background: transparent;
+  box-shadow: none;
+}
+
+.cmd__icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--n-text);
+}
+
+.cmd__row.is-active .cmd__icon {
+  color: var(--n-butter);
+}
+
+.cmd__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cmd__title {
+  font-size: var(--n-fs-body);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmd__sub {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kbd--enter {
+  min-width: 30px;
+}
+
+.cmd__none {
+  padding: 14px 16px 6px;
+  text-align: start;
+}
+
+.cmd__none-title {
+  font-weight: 600;
+}
+
+.cmd__none-sub {
+  margin-top: 4px;
+  font-size: var(--n-fs-label);
+  color: var(--n-muted);
+}
+
+.cmd__hint-word {
+  color: var(--n-butter);
+  font-weight: 600;
+}
+
+.cmd__hints {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--n-s4);
+  padding: 4px 6px 0;
+  font-size: 11px;
+  color: var(--n-muted);
+}

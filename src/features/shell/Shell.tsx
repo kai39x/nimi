@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type WheelEvent } from "react";
 import { Icon } from "@/components/Icon";
-import { focusOverlay, recenterOverlay, setOverlayExpanded } from "@/ipc/commands";
+import { focusOverlay, recenterOverlay, setOverlayExpanded, toolRun } from "@/ipc/commands";
 import { Events, onEvent } from "@/ipc/events";
 import { useT } from "@/i18n";
 import type { CapsuleStyle } from "@/ipc/generated/CapsuleStyle";
+import type { TimerDone } from "@/ipc/generated/TimerDone";
+import { fmtNumber } from "@/lib/format";
 import { useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
 import { refreshHitRects, useHitRect } from "@/features/overlay/hitRects";
 import { useOverlayDrag } from "@/features/overlay/useOverlayDrag";
 import { Nimi, type NimiHandle } from "@/features/character/Nimi";
-import { setAmbientMood, useNimiMood } from "@/features/character/useNimiMood";
+import { setAmbientMood, setMoodOverride, useNimiMood } from "@/features/character/useNimiMood";
 import { hasSong, media, useMedia, useMusicActive, useVolume } from "@/features/music/media";
 import { MusicCapsule, MusicIsland, useRememberPlayer } from "@/features/music/Music";
 import { Panel } from "@/features/panel/Panel";
@@ -17,8 +19,13 @@ import { dismiss as dismissFeed, reopen as reopenFeed, setFeedEnabled, useFeed, 
 import { FeedLayer, useFeedZones } from "@/features/feed/FeedLayer";
 import { PocketTray, usePocket } from "@/features/pocket/Pocket";
 import type { TabId } from "@/features/panel/TabBar";
+import { CommandBar, type Outcome } from "@/features/commandbar/CommandBar";
+import { onTimerDone, useTimers } from "@/features/shortcuts/timer";
+import { TimerCapsule } from "@/features/shortcuts/TimerCapsule";
+import { TimerPill } from "@/features/shortcuts/TimerPill";
+import { onShellRequest } from "./actions";
 import { CapsuleMenu, CapsulePill } from "./CapsuleMenu";
-import { CAPSULE_TOP, DEFAULT_NIMI_SIZE, FEED_NIMI_CENTER, FEED_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
+import { CAPSULE_TOP, COMMAND_NIMI_SIZE, DEFAULT_NIMI_SIZE, FEED_NIMI_CENTER, FEED_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
 import { usePeek } from "./usePeek";
 import "./shell.css";
 
@@ -33,8 +40,8 @@ const VOLUME_SHOW_MS = 1200;
 /** Volume step per wheel notch (deltaY 100). */
 const WHEEL_STEP = 0.02;
 
-type Mode = "compact" | "island" | "panel" | "pocket";
-type Pill = { kind: "song" | "volume" | "toast"; text: string; icon?: "play" | "pause" } | null;
+type Mode = "compact" | "island" | "panel" | "pocket" | "command";
+type Pill = { kind: "song" | "volume" | "toast"; text: string; icon?: "play" | "pause" | "check" | "timer" | "pick"; tone?: "butter" } | null;
 
 /** Stays true for `ms` after `shown` turns false, so the element can fade before unmounting. */
 function useFadeMount(shown: boolean, ms: number): boolean {
@@ -62,8 +69,11 @@ export function Shell() {
   const ref = useRef<HTMLDivElement>(null);
   const t = useT();
   const settings = useSettings();
+  const lang = settings?.language ?? "ar";
   const drag = useOverlayDrag();
   const [mode, setMode] = useState<Mode>("compact");
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [tab, setTab] = useState<TabId>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const expanded = mode !== "compact";
@@ -115,6 +125,9 @@ export function Shell() {
 
   const show = useCallback(
     (next: Mode) => {
+      // NIMI stays curious while the command bar is open (board 10); leaving it ends that.
+      if (next === "command") setMoodOverride("curious", 120_000);
+      else if (modeRef.current === "command") setMoodOverride(null);
       setMode(next);
       setMenuOpen(false);
       void setOverlayExpanded(next !== "compact");
@@ -160,7 +173,15 @@ export function Shell() {
 
   // The song ending while the island is open: it shows the empty state; the panel stays.
   const nimiSize =
-    mode === "panel" || mode === "pocket" ? PANEL_NIMI_SIZE : mode === "island" ? ISLAND_NIMI_SIZE : feeding ? FEED_NIMI_SIZE : size;
+    mode === "panel" || mode === "pocket"
+      ? PANEL_NIMI_SIZE
+      : mode === "island"
+        ? ISLAND_NIMI_SIZE
+        : mode === "command"
+          ? COMMAND_NIMI_SIZE
+          : feeding
+            ? FEED_NIMI_SIZE
+            : size;
 
   // --- pills: song name on hover, volume on wheel / external change, play/pause toast ----------
   const [pill, setPill] = useState<Pill>(null);
@@ -199,6 +220,109 @@ export function Shell() {
   }, [volume.level, volume.muted, volume.available, flash]);
   useEffect(() => () => window.clearTimeout(meterTimer.current), []);
 
+  // --- command bar (spec §8), tools, timers (phase 7) -----------------------------------------
+  const [prefill, setPrefill] = useState("");
+  const [commandHeight, setCommandHeight] = useState(200);
+  const openCommand = useCallback(
+    (text = "") => {
+      setPrefill(text);
+      setPill(null);
+      show("command");
+    },
+    [show],
+  );
+  useEffect(
+    () =>
+      onEvent(Events.commandOpen, () => {
+        if (modeRef.current === "command") close();
+        else openCommand("");
+      }),
+    [openCommand, close],
+  );
+  // Screen tools run once the panel / bar has gone, so they never capture NIMI's own UI.
+  const runTool = useCallback(
+    (tool: "screenshot" | "colorPicker" | "lock") => {
+      close();
+      window.setTimeout(() => void toolRun(tool).catch(() => flash({ kind: "toast", text: t("cmd.err.generic") }, 2400)), tool === "lock" ? 0 : 320);
+    },
+    [close, flash, t],
+  );
+  const commandDone = useCallback(
+    (outcome: Outcome | null) => {
+      close();
+      if (!outcome) return;
+      if (outcome.tool) runTool(outcome.tool);
+      if (outcome.toast) flash({ kind: "toast", text: outcome.toast, icon: outcome.ok ? "check" : undefined, tone: outcome.tone }, 2600);
+      setMoodOverride(outcome.ok || outcome.tone ? "happy" : outcome.toast ? "shy" : null, 1800);
+    },
+    [close, flash, runTool],
+  );
+  useEffect(
+    () =>
+      onShellRequest((r) => {
+        if (r.kind === "command") openCommand(r.prefill ?? "");
+        else if (r.kind === "tool") runTool(r.tool);
+        else flash({ kind: "toast", text: r.text, tone: r.tone }, 2600);
+      }),
+    [openCommand, runTool, flash],
+  );
+  // The color picker closed with a color: it is on the clipboard.
+  useEffect(
+    () =>
+      onEvent<string | null>(Events.pickerDone, (hex) => {
+        if (!hex) return;
+        flash({ kind: "toast", text: t("picker.copied").replace("{s}", hex), icon: "pick", tone: "butter" }, 2600);
+        setMoodOverride("happy", 1500);
+      }),
+    [flash, t],
+  );
+
+  // A snip taken through NIMI was saved (setting «وين تنحفظ اللقطة»).
+  useEffect(
+    () =>
+      onEvent<{ Ok?: string; Err?: string }>(Events.screenshotSaved, (r) => {
+        if (r.Ok) {
+          const name = r.Ok.split(/[\\/]/).pop() ?? r.Ok;
+          flash({ kind: "toast", text: t("shot.saved").replace("{s}", `⁨${name}⁩`), icon: "check", tone: "butter" }, 3200);
+          setMoodOverride("happy", 1500);
+        } else {
+          flash({ kind: "toast", text: t("shot.failed") }, 3200);
+        }
+      }),
+    [flash, t],
+  );
+
+  const timersState = useTimers();
+  const mainTimer = timersState.main;
+  // A finished timer / reminder stays under the capsule until clicked; a Pomodoro switch is a
+  // normal note (5 s). NIMI hops either way.
+  const [timerAlert, setTimerAlert] = useState<string | null>(null);
+  useEffect(
+    () =>
+      onTimerDone((d: TimerDone) => {
+        nimiRef.current?.poke();
+        setMoodOverride(d.kind === "pomodoro" && !d.finished && d.phase === "break" ? "happy" : "celebrate", 2400);
+        if (d.kind === "pomodoro" && !d.finished) {
+          const text =
+            d.phase === "break"
+              ? t("timer.done.break")
+              : t("timer.done.work").replace("{r}", fmtNumber(d.round, lang)).replace("{n}", fmtNumber(d.rounds, lang));
+          flash({ kind: "toast", text, icon: "timer", tone: "butter" }, 5000);
+          return;
+        }
+        setTimerAlert(
+          d.kind === "reminder"
+            ? t("timer.done.reminder").replace("{s}", d.label ?? "")
+            : d.kind === "pomodoro"
+              ? t("timer.done.pomodoro")
+              : d.label
+                ? t("timer.done.labeled").replace("{s}", d.label)
+                : t("timer.done.timer"),
+        );
+      }),
+    [flash, t, lang],
+  );
+
   const onWheel = (e: WheelEvent) => {
     // Only the bare capsule is a volume knob: over a feed stage (e.g. a long text result) or the
     // right-click menu the wheel scrolls that content instead.
@@ -211,18 +335,21 @@ export function Shell() {
   const capsuleStyle: CapsuleStyle = settings?.capsuleStyle ?? "nimiInCapsule";
   const nimiShown = expanded || feeding || capsuleStyle !== "capsuleOnly";
   const nimiMounted = useFadeMount(nimiShown, NIMI_FADE_MS);
-  const musicLook = !expanded && !feeding && musicActive && capsuleStyle !== "nimiOnly";
+  // A running timer takes the capsule over from the music look (board 13 note).
+  const timerLook = !expanded && !feeding && !!mainTimer && capsuleStyle !== "nimiOnly";
+  const musicLook = !expanded && !feeding && !timerLook && musicActive && capsuleStyle !== "nimiOnly";
 
   // «يطل»: over a maximized window only a 12 px strip stays; it alone takes the mouse.
   // No «يطل» while a job runs behind the capsule (or its result waits): Kai wants to see it working.
-  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg });
+  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg || !!timerAlert || pill?.kind === "toast" });
   useHitRect(ref, "shell", !peek);
   useHitRect(stripRef, "peek", peek);
 
   // The hit rect follows the shell box, which changes shape with the style, music and peek.
-  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, feed.phase, feed.bg, trackMorph]);
+  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, timerLook, feed.phase, feed.bg, tab, commandHeight, trackMorph]);
 
   const vars = {
+    ...(mode === "command" ? { height: commandHeight } : null),
     "--nimi-scale": scale,
     "--capsule-top": `${CAPSULE_TOP}px`,
     "--panel-top": `${PANEL_TOP}px`,
@@ -232,8 +359,8 @@ export function Shell() {
     <>
       <div
         ref={stripRef}
-        className={`peek-strip peek-strip--${capsuleStyle}` + (musicLook ? " peek-strip--music" : "")}
-        style={vars}
+        className={`peek-strip peek-strip--${capsuleStyle}` + (musicLook ? " peek-strip--music" : "") + (timerLook ? " peek-strip--timer" : "")}
+        style={{ ...vars, height: undefined }}
         aria-hidden="true"
       />
       <div
@@ -241,8 +368,10 @@ export function Shell() {
         className={[
           "shell",
           mode === "panel"
-            ? "shell--panel"
-            : mode === "island"
+            ? "shell--panel" + (tab === "shortcuts" ? " shell--tall" : "")
+            : mode === "command"
+              ? "shell--command"
+              : mode === "island"
               ? "shell--island"
               : mode === "pocket"
                 ? "shell--pocket"
@@ -250,6 +379,7 @@ export function Shell() {
                   ? `shell--feed shell--feed-${feed.phase}`
                   : `shell--capsule shell--${capsuleStyle}`,
           musicLook && "shell--music",
+          timerLook && "shell--timer",
           peek && "shell--peek",
           winter && "shell--winter",
         ]
@@ -295,6 +425,12 @@ export function Shell() {
             reopenFeed();
             return;
           }
+          // A finished timer's note: the click just says «تمام».
+          if (timerAlert) {
+            window.clearTimeout(pendingOpen.current);
+            setTimerAlert(null);
+            return;
+          }
           // A pocket satellite (or the pocket badge) opens the pocket tray (spec §7).
           if ((e.target as Element).closest(".n-sat, .pocket-badge")) {
             window.clearTimeout(pendingOpen.current);
@@ -320,6 +456,7 @@ export function Shell() {
       >
         <div className="shell__glass n-glass" aria-hidden="true" />
         {musicLook && <MusicCapsule nimi={capsuleStyle !== "capsuleOnly"} />}
+        {timerLook && mainTimer && <TimerCapsule timer={mainTimer} />}
         {nimiMounted && (
           <div className={"shell__nimi" + (nimiShown ? "" : " is-leaving")} onClick={mode === "panel" ? moodClick : undefined}>
             <Nimi
@@ -343,6 +480,7 @@ export function Shell() {
           }}
         />
         <Panel open={mode === "panel"} mood={mood} tab={tab} onTab={setTab} onCollapse={close} />
+        <CommandBar open={mode === "command"} prefill={prefill} onDone={commandDone} onHeight={setCommandHeight} />
         <PocketTray open={mode === "pocket"} onClose={close} />
         {feeding && mode === "compact" && <FeedLayer nimiCenter={FEED_NIMI_CENTER} />}
         {!expanded && !feeding && !peek && pocketCount > 0 && (
@@ -360,8 +498,15 @@ export function Shell() {
             <bdi>{t(feed.phase === "working" ? "feed.bg.working" : feed.phase === "result" ? "feed.bg.done" : "feed.bg.failed")}</bdi>
           </CapsulePill>
         )}
+        {!expanded && !peek && !menuOpen && !pill && !feed.bg && timerAlert && (
+          <CapsulePill key="timer-alert" tone="butter">
+            <Icon name="timer" size={14} className="capsule-pill__icon" />
+            <bdi>{timerAlert}</bdi>
+          </CapsulePill>
+        )}
+        {!expanded && !peek && !menuOpen && !pill && !feed.bg && !timerAlert && mainTimer && capsuleStyle === "nimiOnly" && <TimerPill timer={mainTimer} />}
         {!expanded && !peek && !menuOpen && pill && (
-          <CapsulePill key={pill.kind} tone={pill.kind === "volume" ? "butter" : undefined}>
+          <CapsulePill key={pill.kind + pill.text} tone={pill.kind === "volume" || pill.tone === "butter" ? "butter" : undefined}>
             {pill.icon && <Icon name={pill.icon} size={14} className="capsule-pill__icon" />}
             <bdi>{pill.text}</bdi>
           </CapsulePill>

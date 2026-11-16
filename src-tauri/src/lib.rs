@@ -6,11 +6,13 @@
 //! are generated from one place.
 
 mod files;
+mod hotkeys;
 mod ipc;
 mod media;
 mod pocket;
 mod settings;
 mod system;
+mod tools;
 mod tray;
 mod window;
 
@@ -87,6 +89,32 @@ pub fn run() {
             ipc::pocket_copy,
             ipc::pocket_run,
             ipc::pocket_drag,
+            ipc::timer_state,
+            ipc::timer_start,
+            ipc::timer_pause,
+            ipc::timer_resume,
+            ipc::timer_extend,
+            ipc::timer_stop,
+            ipc::clip_list,
+            ipc::clip_copy,
+            ipc::clip_remove,
+            ipc::clip_clear,
+            ipc::tool_run,
+            ipc::mic_state,
+            ipc::mic_toggle,
+            ipc::picker_sample,
+            ipc::picker_pick,
+            ipc::picker_cancel,
+            ipc::picker_follow,
+            ipc::apps_search,
+            ipc::files_search,
+            ipc::launch,
+            ipc::open_known_folder,
+            ipc::run_user_shortcut,
+            ipc::zip_explorer_selection,
+            ipc::command_bar_opened,
+            ipc::pick_screenshot_folder,
+            ipc::screenshot_default_folder,
             ipc::dev_window_flags,
             ipc::dev_hittest_state,
         ])
@@ -104,6 +132,11 @@ pub fn run() {
                 api.prevent_close();
                 let _ = win.hide();
             }
+            // The color picker is shown and hidden, never destroyed.
+            (tools::picker::PICKER_LABEL, WindowEvent::CloseRequested { api, .. }) => {
+                api.prevent_close();
+                tools::picker::close(win.app_handle(), None);
+            }
             _ => {}
         })
         .setup(|app| {
@@ -118,6 +151,8 @@ pub fn run() {
             media::spawn(handle);
             system::spawn(handle);
             pocket::spawn(handle);
+            tools::spawn(handle);
+            hotkeys::spawn(handle, current.command_hotkey);
             files::drop::install(handle);
             {
                 // WebView2 may add its input window a moment after the controller: install again.

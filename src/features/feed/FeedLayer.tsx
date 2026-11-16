@@ -7,6 +7,9 @@ import type { LinkSafety } from "@/ipc/generated/LinkSafety";
 import type { Meal } from "@/ipc/generated/Meal";
 import { useSettings } from "@/lib/settings";
 import { fmtBytes } from "@/features/system/system";
+import { setMoodOverride } from "@/features/character/useNimiMood";
+import { shellActions } from "@/features/shell/actions";
+import { addFavoritePaths } from "@/features/shortcuts/Favorites";
 import { dismiss, openSub, registerNear, registerZones, retry, runAction, toPocket, undo, useFeed, type Zone } from "./feed";
 import "./feed.css";
 
@@ -18,8 +21,8 @@ import "./feed.css";
  */
 
 type Bubble = {
-  /** `pocket`, `sub:convert`, `sub:pages`, `back`, or a FeedAction (with `target` for formats). */
-  action: FeedAction | "pocket" | "sub:convert" | "sub:pages" | "back";
+  /** `pocket`, `favorite`, `sub:convert`, `sub:pages`, `back`, or a FeedAction (`target` for formats). */
+  action: FeedAction | "pocket" | "favorite" | "sub:convert" | "sub:pages" | "back";
   icon?: IconName;
   /** A format name drawn in the ball instead of an icon («PNG»). */
   badge?: string;
@@ -31,6 +34,9 @@ type Bubble = {
 const ext = (p: string) => (p.split(/[\\/]/).pop() ?? "").split(".").pop()?.toLowerCase() ?? "";
 const IMAGE_EXT = ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp", "heic", "jxr", "ico"];
 const allOf = (meal: Meal, list: string[]) => meal.paths.length > 1 && meal.paths.every((p) => list.includes(ext(p)));
+/** An app dropped on NIMI can be pinned to the favorites (phase 7: «اسحب البرنامج وحطه»). */
+const APP_EXT = ["exe", "lnk", "appref-ms"];
+const isApp = (meal: Meal | null) => !!meal && meal.paths.length === 1 && APP_EXT.includes(ext(meal.paths[0]));
 
 /** Board order from the left in Arabic (copy … pocket); English mirrors it. */
 function bubblesFor(meal: Meal | null): Bubble[] {
@@ -59,6 +65,7 @@ function bubblesFor(meal: Meal | null): Bubble[] {
   if (kind === "folder") list.push({ action: "terminal", icon: "terminal", label: "feed.terminal" });
   if (meal && kind === "many" && allOf(meal, IMAGE_EXT)) list.push({ action: "imagesToPdf", badge: "PDF", label: "feed.toOnePdf" });
   if (meal && kind === "many" && allOf(meal, ["pdf"])) list.push({ action: "pdfMerge", icon: "layers", label: "feed.merge" });
+  if (isApp(meal)) list.push({ action: "favorite", icon: "star4", label: "feed.favorite" });
   list.push({ action: "pocket", icon: "pocket", label: "feed.pocket" });
   return list;
 }
@@ -185,6 +192,12 @@ export function FeedLayer({ nimiCenter }: { nimiCenter: { x: number; y: number }
     window.setTimeout(() => setPopped(null), 260);
     setMore(false);
     if (b.action === "pocket") void toPocket();
+    else if (b.action === "favorite") {
+      void addFavoritePaths(s.paths);
+      setMoodOverride("happy", 1800);
+      dismiss();
+      shellActions.toast(t("feed.done.favorite"), "butter");
+    }
     else if (b.action === "back") openSub(null);
     else if (b.action === "sub:convert") openSub("convert");
     else if (b.action === "sub:pages") openSub("pages");

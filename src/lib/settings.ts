@@ -51,3 +51,8 @@ export async function updateSettings(patch: Partial<Settings>): Promise<void> {
   publish({ ...current, ...patch });
   publish(await setSettings(current));
 }
+
+/** The current settings outside React (null before the first load). */
+export function getSettingsNow(): Settings | null {
+  return current;
+}

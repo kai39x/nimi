@@ -1,10 +1,9 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-16)
-- Phases 0–5 done and pushed (`4326dd4` phase 5, Kai confirmed it works; Recycle Bin stays
-  pre-ticked in Boost). Phase 6 (Feed & Pocket) committed as `23738cb`; Kai's 5 notes on it are
-  built and committed as `phase 6.1:` (both **not pushed**). **Waiting for Kai to test 6.1 and OK
-  it; then phase 7.**
+- Phases 0–6.1 done and pushed (`95e3467` phase 6.1). **Phase 7 (shortcuts, timer, command bar)
+  is built and tested, not committed yet: waiting for Kai to try it and OK it; then commit
+  `phase 7:` and start phase 8 (notifications).**
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
@@ -12,6 +11,33 @@
   change. `engine.ts` = the lab's spring engine on HTML compositor layers; it also drives Nuri's
   glow and roll (no idle CSS animations — see PLAN "What phase 5 taught us").
 - Peek «يطل»: `fullscreen.rs` reports `covered`, the hit-test loop `reveal`, `usePeek.ts` decides.
+
+## Phase 7 — shortcuts & command bar (spec §5 «اختصارات», §8; boards 10, 13)
+- Rust `tools/`: `timer.rs` (main countdown or Pomodoro 25/5 × 4, plus reminders; one thread,
+  `nimi://timer/state` + `nimi://timer/done`), `clipboard.rs` (last 30 texts, memory only, skips
+  password-manager copies), `mic.rs` (default capture device mute), `picker.rs` (the `picker`
+  window, excluded from capture, GDI 11×11 sample), `apps.rs` (`shell:AppsFolder`), `find.rs`
+  (file-name index of the user folders), `explorer.rs` (selection of the Explorer window that was
+  in front → «ضغط»). `hotkeys.rs`: double Ctrl / Alt / Shift (setting) → `nimi://command/open`;
+  ignored over fullscreen. `window::foreground::force` lifts the foreground lock for the hotkey.
+- Front: `features/commandbar/` (`commands.ts` words + parser, `calc.ts` calculator / units /
+  durations, `CommandBar.tsx`), `features/shortcuts/` (tab, favorites, Pomodoro ring, timer in
+  the capsule / pill, sheets), `features/picker/`, `shell/actions.ts` (open bar / run tool /
+  toast from anywhere). Shell modes gain `command`; the panel is 668 px tall on the shortcuts tab.
+- Settings: `commandHotkey`, `tiles` (order + hidden), `favorites`, `userShortcuts`,
+  `clipboardHistory`; Settings window «الاختصارات» section.
+- Screenshots (Kai's note): `tools/screenshot.rs` waits up to 2 min for the snip NIMI opened to
+  land on the clipboard (the clipboard listener hands it over), then per `screenshotSave`: save
+  dialog («اسألني», default), straight into `screenshotFolder` (empty = `Pictures\Screenshots`),
+  or clipboard only. `nimi://screenshot/saved` → pill; result pills drop NIMI out of peek. Windows'
+  Snipping Tool may also auto-save its own copy (its own setting) — Kai to decide.
+- Favorites: «+» lists installed apps; feeding NIMI an `.exe` / `.lnk` adds a «للمفضلة» bubble
+  (dragging into the open panel can't work — the press outside closes it).
+- Tested here: hotkey from another app, every command row, calc / units / typo hint, timer start →
+  capsule → done alert, Pomodoro ring / pause / reminders, tile hide + reorder, favorites picker,
+  editor, picker loupe (cancelled), snip (cancelled), ZIP of an Explorer selection (own test
+  file), clipboard capture. Not run on Kai's PC on purpose: «قفل الجهاز», «كتم المايك» toggle,
+  running a user command. Pomodoro phase switches are unit-tested (`cargo test --lib tools`).
 
 ## Phase 6.1 — Kai's notes, built (2026-11-16)
 - **Drops**: `files/drop.rs` replaces wry's files-only `IDropTarget` on the overlay's WebView2

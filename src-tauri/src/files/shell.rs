@@ -244,6 +244,59 @@ pub fn pick_folder(app: &AppHandle, start: Option<&Path>) -> Option<PathBuf> {
     })
 }
 
+/// The system «Save as» dialog (PNG or JPG), in front of everything; `None` when cancelled.
+pub fn save_file(app: &AppHandle, start: &Path, name: &str) -> Option<PathBuf> {
+    use windows::Win32::UI::Shell::{
+        Common::COMDLG_FILTERSPEC, FileSaveDialog, IFileSaveDialog, FOS_OVERWRITEPROMPT,
+    };
+    let start = start.to_path_buf();
+    let name = name.to_string();
+    window::with_foreground(app, move |owner| {
+        thread::spawn(move || {
+            // SAFETY: COM on this thread only; the strings outlive the dialog calls.
+            unsafe {
+                let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+                let dialog: IFileSaveDialog =
+                    CoCreateInstance(&FileSaveDialog, None, CLSCTX_INPROC_SERVER).ok()?;
+                let opts = dialog.GetOptions().ok()?;
+                dialog
+                    .SetOptions(opts | FOS_FORCEFILESYSTEM | FOS_OVERWRITEPROMPT)
+                    .ok()?;
+                let (png, png_spec) = (HSTRING::from("PNG"), HSTRING::from("*.png"));
+                let (jpg, jpg_spec) = (HSTRING::from("JPG"), HSTRING::from("*.jpg;*.jpeg"));
+                let types = [
+                    COMDLG_FILTERSPEC {
+                        pszName: PCWSTR(png.as_ptr()),
+                        pszSpec: PCWSTR(png_spec.as_ptr()),
+                    },
+                    COMDLG_FILTERSPEC {
+                        pszName: PCWSTR(jpg.as_ptr()),
+                        pszSpec: PCWSTR(jpg_spec.as_ptr()),
+                    },
+                ];
+                let _ = dialog.SetFileTypes(&types);
+                let _ = dialog.SetDefaultExtension(&HSTRING::from("png"));
+                let _ = dialog.SetFileName(&HSTRING::from(name.as_str()));
+                if let Ok(item) = SHCreateItemFromParsingName::<_, _, IShellItem>(
+                    &HSTRING::from(start.as_os_str()),
+                    None,
+                ) {
+                    let _ = dialog.SetFolder(&item);
+                }
+                dialog.Show(Some(HWND(owner as *mut c_void))).ok()?;
+                let item = dialog.GetResult().ok()?;
+                let path = item.GetDisplayName(SIGDN_FILESYSPATH).ok()?;
+                let out = path.to_string().ok();
+                windows::Win32::System::Com::CoTaskMemFree(Some(path.0 as *const c_void));
+                out.map(PathBuf::from)
+            }
+        })
+        .join()
+        .ok()
+        .flatten()
+    })
+}
+
 // --- move & recycle ----------------------------------------------------------------------------
 
 /// Moves a file or folder; across drives Windows copies first and removes the original only

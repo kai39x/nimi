@@ -1,0 +1,70 @@
+/* The picker window covers a monitor; it must catch the mouse but show nothing but the loupe. */
+html.picker-root,
+html.picker-root body,
+html.picker-root #root {
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.picker {
+  position: fixed;
+  inset: 0;
+  /* Not fully transparent, so the window takes every click. */
+  background: rgba(0, 0, 0, 0.004);
+  cursor: crosshair;
+  user-select: none;
+}
+
+.picker__hint {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--n-text);
+  pointer-events: none;
+}
+
+.picker__loupe {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.picker__canvas {
+  display: block;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.9),
+    0 0 0 4px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+  image-rendering: pixelated;
+}
+
+.picker__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
+  direction: ltr;
+}
+
+.picker__swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.picker__hex {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--n-text);
+}
