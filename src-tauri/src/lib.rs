@@ -153,13 +153,21 @@ pub fn run() {
             if let Err(err) = settings::sync_autostart(handle, current.autostart) {
                 log::warn!("autostart sync failed: {err}");
             }
-            window::setup(handle)?;
-            tray::setup(handle)?;
+            // Everything a page may ask for must exist before the first page loads. With the
+            // frontend bundled into the exe (release), a page can call commands while its window
+            // is still being built — so the windows are declared `create: false` and built here,
+            // after all managed state.
             media::spawn(handle);
             system::spawn(handle);
             pocket::spawn(handle);
             tools::spawn(handle);
             notify::spawn(handle);
+            for config in app.config().app.windows.clone() {
+                tauri::WebviewWindowBuilder::from_config(handle, &config)?.build()?;
+            }
+            window::setup(handle)?;
+            tray::setup(handle)?;
+            notify::sync_tray(handle);
             hotkeys::spawn(handle, current.command_hotkey);
             files::drop::install(handle);
             {

@@ -211,6 +211,16 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
 - CSS order between feature files is not guaranteed: a shell mode in another file needs
   `.shell.shell--x` to beat `.shell { border-radius: 999px }`.
 
+### What the v1.0.0 release taught us
+
+- **Release builds start the page before `setup` finishes.** Tauri builds the `tauri.conf.json`
+  windows before the setup hook; with the frontend embedded (release) the page loads at once and
+  its first commands (`pocket_list` → `app.state::<SettingsStore>()`) ran before the state was
+  managed → panic → `0xc0000409` on every launch. The dev build never showed it because Vite
+  serves the page later. Fix: every window is `"create": false` and built in `setup` after all
+  managed state (`lib.rs`). Test a release-like build with `npm run tauri build -- --debug
+  --no-bundle` (embedded assets, symbols, readable backtrace) before publishing.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

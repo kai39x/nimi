@@ -27,7 +27,8 @@
         "skipTaskbar": true,
         "focusable": false,
         "visible": false,
-        "dragDropEnabled": true
+        "dragDropEnabled": true,
+        "create": false
       },
       {
         "label": "settings",
@@ -41,7 +42,8 @@
         "transparent": true,
         "shadow": false,
         "center": true,
-        "visible": false
+        "visible": false,
+        "create": false
       },
       {
         "label": "picker",
@@ -58,7 +60,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "create": false
       }
     ],
     "security": {
