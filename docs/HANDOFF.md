@@ -23,11 +23,11 @@ Kai allows downloading any crate / npm library these need (no need to ask again)
    satellites are clickable there too. Screenshot all three styles at 48 / 64 / 96.
 2. **More conversions, as a second round of bubbles.** «تحويل» opens a new bubble arc of the target
    formats the meal can become (e.g. JPG → PNG / WebP / PDF / ICO / BMP; PNG → JPG / WebP / PDF;
-   PDF → DOCX / TXT / images; DOCX → PDF / TXT …), with a back bubble. Plan the matrix per kind and
-   say which need which crate. Notes: WebP encode needs a crate (`image` with webp, or `webp`);
-   image → PDF via `printpdf` / `lopdf`; PDF → TXT via `pdf-extract` / `lopdf`; PDF → DOCX is text-only
-   (layout lost) via `docx-rs` — tell Kai that honestly; DOCX → PDF has no offline Windows API without
-   Word (check for Word COM, else skip).
+   PDF → TXT / images …), with a back bubble. Plan the matrix per kind and say which need which
+   crate. Notes: WebP encode needs a crate (`image` with webp, or `webp`); image → PDF via
+   `printpdf` / `lopdf`; PDF → TXT via `pdf-extract` / `lopdf`.
+   **Dropped by Kai (2026-11-16): PDF → DOCX and DOCX → PDF** — a faithful conversion needs Word or
+   an online service, NIMI is local-only, and Kai has no Word. Don't offer them.
 3. **OCR: add a «نسخ النص» button** on the result (it copies automatically today, but he wants the
    button; show «نسخت» feedback).
 4. **The "working" look must stay until the job ends.** Zipping a 6 GB MP4 showed NIMI working,
