@@ -5,6 +5,7 @@ import { daysBetween, fmtNumber, fmtPercent } from "@/lib/format";
 import { useSettings } from "@/lib/settings";
 import type { Mood } from "@/features/character/rig/moods";
 import { NowPlayingCard } from "@/features/music/Music";
+import { useSystem } from "@/features/system/system";
 import { moodLabel, moodLevel } from "./moodLabels";
 import { useEnergy } from "./useEnergy";
 
@@ -25,6 +26,8 @@ export function HomeTab({ mood }: { mood: Mood }) {
   const t = useT();
   const settings = useSettings();
   const lang: Lang = settings?.language ?? "ar";
+  const sys = useSystem();
+  const systemDrive = sys.stats?.drives.find((d) => d.system) ?? sys.stats?.drives[0] ?? null;
   const energy = useEnergy(mood);
   const days = settings?.firstRunMs ? daysBetween(settings.firstRunMs) : 0;
   const meals = 0; // phase 6
@@ -72,17 +75,17 @@ export function HomeTab({ mood }: { mood: Mood }) {
         <section className="card minisys">
           {(
             [
-              ["home.sys.cpu", "mint"],
-              ["home.sys.ram", "peri"],
-              ["home.sys.disk", "coral"],
+              ["home.sys.cpu", "mint", sys.stats ? sys.stats.cpu.usage / 100 : null],
+              ["home.sys.ram", "peri", sys.stats ? sys.stats.ram.usage / 100 : null],
+              ["home.sys.disk", "coral", systemDrive ? 1 - systemDrive.free / systemDrive.total : null],
             ] as const
-          ).map(([key, tone]) => (
+          ).map(([key, tone, value]) => (
             <div key={key} className="minisys__item">
               <div className="minisys__head">
-                <span>{t(key)}</span>
-                <span className={`minisys__value tone-${tone}`}>—</span>
+                <span>{key === "home.sys.disk" && systemDrive ? t(key).replace("C", systemDrive.letter.replace(":", "")) : t(key)}</span>
+                <span className={`minisys__value tone-${tone}`}>{value == null ? "—" : fmtPercent(value, lang)}</span>
               </div>
-              <Bar value={0} tone={tone} />
+              <Bar value={value ?? 0} tone={tone} />
             </div>
           ))}
         </section>

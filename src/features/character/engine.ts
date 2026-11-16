@@ -345,6 +345,7 @@ const live = new Set<NimiEngine>();
 let raf = 0;
 let pace = 0;
 let paused = false;
+let inLoop = false;
 /**
  * Engine steps per second. On a 143 Hz display every requested animation frame is a full
  * main-frame pass (style, paint, commit) even when nothing changes, so the loop sleeps on a
@@ -358,6 +359,10 @@ function loop(now: number) {
   raf = 0;
   if (paused) return;
   let fast = false;
+  // Tweens, mood switches and behaviors started inside a frame call kick(); without this flag
+  // each of them would start a second loop chain next to this one (they multiplied to ~400
+  // steps/s on a 143 Hz display before this guard).
+  inLoop = true;
   for (const engine of live) {
     try {
       fast = engine.frame(now) || fast;
@@ -366,15 +371,16 @@ function loop(now: number) {
       console.error("nimi engine frame failed", err);
     }
   }
-  if (!live.size) return;
+  inLoop = false;
+  if (!live.size || pace || raf) return; // another chain is already scheduled: let it run alone
   const spent = performance.now() - now;
-  // Wake a little early so the next requestAnimationFrame lands on the following vsync.
+  // Wake a touch early so the next requestAnimationFrame lands on the following vsync.
   pace = window.setTimeout(
     () => {
       pace = 0;
-      if (!paused && live.size) raf = requestAnimationFrame(loop);
+      if (!paused && live.size && !raf) raf = requestAnimationFrame(loop);
     },
-    Math.max(0, 1000 / (fast ? MAX_FPS : CALM_FPS) - 6 - spent),
+    Math.max(0, 1000 / (fast ? MAX_FPS : CALM_FPS) - 3 - spent),
   );
 }
 
@@ -382,11 +388,7 @@ function loop(now: number) {
 const written = new WeakMap<HTMLElement, Record<string, string>>();
 
 /** Writes a style property only when its text changes (most layers sit still most frames). */
-function put(
-  el: HTMLElement,
-  prop: "transform" | "opacity" | "zIndex",
-  value: string,
-) {
+function put(el: HTMLElement, prop: "transform" | "opacity" | "zIndex", value: string) {
   let w = written.get(el);
   if (!w) written.set(el, (w = {}));
   if (w[prop] === value) return;
@@ -395,7 +397,7 @@ function put(
 }
 
 function kick() {
-  if (!raf && !pace && !paused && live.size) raf = requestAnimationFrame(loop);
+  if (!raf && !pace && !inLoop && !paused && live.size) raf = requestAnimationFrame(loop);
 }
 
 /** Stops every NIMI's frame loop and timers while the overlay is hidden (fullscreen / snoozed). */
@@ -429,6 +431,12 @@ export interface NimiElements {
   nuriFrame: HTMLElement;
   nuri: HTMLElement;
   sats: HTMLElement[];
+  /** Nuri's glow (opacity pulse) and moon (roll), and each satellite's roll: driven here, not by
+   *  CSS keyframes — a CSS animation makes the compositor redraw the whole transparent window on
+   *  every vsync (144/s on a 143 Hz display) even when nothing else moves. */
+  glow: HTMLElement;
+  moonRoll: HTMLElement;
+  satRolls: HTMLElement[];
   satFrames: HTMLElement[];
   body: HTMLElement;
   face: HTMLElement;
@@ -1156,6 +1164,14 @@ export class NimiEngine {
       "opacity",
       layer === "back" && m.mode === "orbit" ? "0.82" : "1",
     );
+
+    // Nuri's roll (±12°, 3.2 s) and glow pulse (.35–.8, 2.8 s): the reference's nRoll / nGlow
+    // keyframes as functions of time, stepped with the rest of the engine.
+    const secs = now / 1000;
+    const roll = this.opts.reduceMotion ? 0 : -12 * Math.cos((TAU * secs) / 3.2);
+    put(e.moonRoll, "transform", `rotate(${fix(roll, 1)}deg)`);
+    put(e.glow, "opacity", fix(0.575 - 0.225 * Math.cos((TAU * secs) / 2.8), 2));
+    for (const r of e.satRolls) put(r, "transform", `rotate(${fix(roll, 1)}deg)`);
 
     // Pocket satellites share the orbit with Nuri, evenly spaced after it.
     const n = e.sats.length;

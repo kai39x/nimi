@@ -13,6 +13,7 @@ use ts_rs::TS;
 use crate::{
     media::{self, MediaShared},
     settings::SettingsStore,
+    system::{self, SystemShared},
     window::{self, OverlayState},
 };
 
@@ -29,6 +30,8 @@ pub mod events {
     pub const MEDIA_STATE: &str = "nimi://media/state";
     pub const MEDIA_ART: &str = "nimi://media/art";
     pub const MEDIA_VOLUME: &str = "nimi://media/volume";
+    pub const SYSTEM_STATS: &str = "nimi://system/stats";
+    pub const SYSTEM_SCAN: &str = "nimi://system/scan";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -423,6 +426,333 @@ pub fn set_volume(media: State<'_, Arc<MediaShared>>, level: f64) {
 #[tauri::command]
 pub fn set_volume_muted(media: State<'_, Arc<MediaShared>>, muted: bool) {
     media.send_volume(media::VolumeMsg::Mute(muted));
+}
+
+// ---------------------------------------------------------------------------------------------
+// System (phase 5, design spec §5 «النظام», board 12)
+
+/// What kind of app it is, so the UI can say «المتصفح» / «مشغّل الألعاب» like board 12.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum AppCategory {
+    Browser,
+    Launcher,
+}
+
+/// The app using the most of something (CPU % or RAM bytes), grouped by exe.
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TopApp {
+    /// Readable name from the exe's version info («Google Chrome»).
+    pub name: String,
+    /// Lower-case exe name.
+    pub exe: String,
+    pub category: Option<AppCategory>,
+    /// CPU percent of the whole machine, or bytes of RAM.
+    pub value: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CpuStats {
+    /// 0..100
+    pub usage: f64,
+    pub cores: u32,
+    pub threads: u32,
+    pub top: Option<TopApp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RamStats {
+    pub usage: f64,
+    #[ts(type = "number")]
+    pub used: u64,
+    #[ts(type = "number")]
+    pub total: u64,
+    pub top: Option<TopApp>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GpuStats {
+    pub name: String,
+    pub usage: f64,
+    #[ts(type = "number")]
+    pub vram_used: u64,
+    #[ts(type = "number")]
+    pub vram_total: u64,
+    /// °C when the driver reports it without admin rights (WDDM 2.4+); the line hides otherwise.
+    pub temp_c: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum DriveState {
+    Ok,
+    Warn,
+    Full,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DriveInfo {
+    /// `C:`
+    pub letter: String,
+    pub label: String,
+    #[ts(type = "number")]
+    pub total: u64,
+    #[ts(type = "number")]
+    pub free: u64,
+    pub ssd: Option<bool>,
+    pub state: DriveState,
+    /// Holds Windows.
+    pub system: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BatteryInfo {
+    pub percent: u8,
+    pub charging: bool,
+}
+
+/// One sample: every 2 s while the panel is open (with GPU and top apps), every 10 s compact.
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SystemStats {
+    #[ts(type = "number")]
+    pub at_ms: i64,
+    pub cpu: CpuStats,
+    pub ram: RamStats,
+    pub gpu: Option<GpuStats>,
+    pub drives: Vec<DriveInfo>,
+    /// Only when the machine has one (spec: no battery card on a desktop).
+    pub battery: Option<BatteryInfo>,
+    /// Top apps and GPU are only measured while the panel is open.
+    pub detailed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum ScanPhase {
+    Running,
+    Done,
+    Cancelled,
+}
+
+/// «أفحص القرص C…»: progress of the largest-files scan (board_states).
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ScanProgress {
+    pub drive: String,
+    pub phase: ScanPhase,
+    #[ts(type = "number")]
+    pub files: u64,
+    /// Bytes seen so far against the drive's used bytes → the progress bar.
+    #[ts(type = "number")]
+    pub bytes: u64,
+    #[ts(type = "number")]
+    pub bytes_total: u64,
+    pub current: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum FileKind {
+    Video,
+    Archive,
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BigFile {
+    pub path: String,
+    pub name: String,
+    /// Name of the folder it sits in («Downloads»).
+    pub folder: String,
+    #[ts(type = "number")]
+    pub size: u64,
+    #[ts(type = "number")]
+    pub modified_ms: i64,
+    pub kind: FileKind,
+    /// System file: shown with a lock, never selectable.
+    pub locked: bool,
+    pub in_downloads: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ScanResult {
+    pub drive: String,
+    pub files: Vec<BigFile>,
+    #[ts(type = "number")]
+    pub finished_ms: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FileActionResult {
+    pub done: Vec<String>,
+    pub failed: Vec<String>,
+    #[ts(type = "number")]
+    pub bytes: u64,
+    /// Where moved files went (`G:\NIMI`).
+    pub dest: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoostApp {
+    pub exe: String,
+    pub name: String,
+    pub category: Option<AppCategory>,
+    #[ts(type = "number")]
+    pub bytes: u64,
+    pub processes: u32,
+    /// Has a visible window (even minimized or on another desktop); such apps are asked to
+    /// close and never forced. Otherwise it runs in the background.
+    pub windowed: bool,
+    /// Ticked by default: background game launchers only (board 12 ج); everything else waits
+    /// for the user to tick it.
+    pub suggested: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PowerInfo {
+    /// The High performance plan exists and is not already active.
+    pub available: bool,
+    /// Boost switched it on; Windows' previous plan comes back at this time (Unix ms).
+    #[ts(type = "number | null")]
+    pub boosted_until_ms: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoostPreview {
+    #[ts(type = "number")]
+    pub temp_bytes: u64,
+    #[ts(type = "number")]
+    pub temp_files: u64,
+    #[ts(type = "number")]
+    pub recycle_bytes: u64,
+    #[ts(type = "number")]
+    pub recycle_items: u64,
+    pub apps: Vec<BoostApp>,
+    pub power: PowerInfo,
+    #[ts(type = "number | null")]
+    pub last_run_ms: Option<i64>,
+    #[ts(type = "number")]
+    pub last_freed: u64,
+}
+
+/// What the user ticked.
+#[derive(Debug, Clone, PartialEq, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoostPlan {
+    pub temp: bool,
+    pub recycle: bool,
+    /// Exe names of the apps to close.
+    pub apps: Vec<String>,
+    pub power: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoostResult {
+    #[ts(type = "number")]
+    pub freed_bytes: u64,
+    pub closed: Vec<String>,
+    /// Apps that would not close (they have a window; NIMI never forces those).
+    pub left_open: Vec<String>,
+    #[ts(type = "number | null")]
+    pub power_until_ms: Option<i64>,
+}
+
+#[tauri::command]
+pub fn get_system_stats(system: State<'_, Arc<SystemShared>>) -> Option<SystemStats> {
+    system.stats()
+}
+
+/// Starts (or restarts) the largest-files scan of one fixed drive; progress on `nimi://system/scan`.
+#[tauri::command]
+pub fn start_scan(app: AppHandle, drive: String) -> Result<(), String> {
+    system::scan::start(&app, &drive)
+}
+
+#[tauri::command]
+pub fn cancel_scan(system: State<'_, Arc<SystemShared>>) {
+    system.cancel_scan();
+}
+
+#[tauri::command]
+pub fn get_scan(
+    system: State<'_, Arc<SystemShared>>,
+    drive: String,
+) -> (Option<ScanProgress>, Option<ScanResult>) {
+    system.scan_state(&drive)
+}
+
+/// Moves files from the last scan to `<drive>\NIMI` (only files from that scan, never locked ones).
+#[tauri::command]
+pub async fn move_files(
+    app: AppHandle,
+    paths: Vec<String>,
+    to_drive: String,
+) -> Result<FileActionResult, String> {
+    tauri::async_runtime::spawn_blocking(move || system::scan::move_files(&app, &paths, &to_drive))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Sends files from the last scan to the Recycle Bin (Windows warns if one is too big to recycle).
+#[tauri::command]
+pub async fn recycle_files(app: AppHandle, paths: Vec<String>) -> Result<FileActionResult, String> {
+    tauri::async_runtime::spawn_blocking(move || system::scan::recycle_files(&app, &paths))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn boost_preview() -> Result<BoostPreview, String> {
+    tauri::async_runtime::spawn_blocking(system::boost::preview)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn run_boost(app: AppHandle, plan: BoostPlan) -> Result<BoostResult, String> {
+    tauri::async_runtime::spawn_blocking(move || system::boost::run(&app, &plan))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// «رجّع الطاقة»: puts the previous power plan back now.
+#[tauri::command]
+pub fn restore_power() -> Result<(), String> {
+    system::boost::restore_power().map_err(|e| e.to_string())
 }
 
 // ---------------------------------------------------------------------------------------------

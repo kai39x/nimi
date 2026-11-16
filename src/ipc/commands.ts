@@ -1,12 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AppInfo } from "./generated/AppInfo";
+import type { BoostPlan } from "./generated/BoostPlan";
+import type { BoostPreview } from "./generated/BoostPreview";
+import type { BoostResult } from "./generated/BoostResult";
+import type { FileActionResult } from "./generated/FileActionResult";
 import type { HitRect } from "./generated/HitRect";
 import type { MediaArt } from "./generated/MediaArt";
 import type { MediaCommand } from "./generated/MediaCommand";
 import type { MediaState } from "./generated/MediaState";
 import type { MonitorInfo } from "./generated/MonitorInfo";
 import type { OverlayVisibility } from "./generated/OverlayVisibility";
+import type { ScanProgress } from "./generated/ScanProgress";
+import type { ScanResult } from "./generated/ScanResult";
 import type { Settings } from "./generated/Settings";
+import type { SystemStats } from "./generated/SystemStats";
 import type { TrayState } from "./generated/TrayState";
 import type { VolumeState } from "./generated/VolumeState";
 
@@ -46,4 +53,15 @@ export const openMediaPlayer = (lastApp: string | null) => invoke<void>("open_me
 export const getVolume = () => invoke<VolumeState>("get_volume");
 export const setVolume = (level: number) => invoke<void>("set_volume", { level });
 export const setVolumeMuted = (muted: boolean) => invoke<void>("set_volume_muted", { muted });
+
+// System (phase 5)
+export const getSystemStats = () => invoke<SystemStats | null>("get_system_stats");
+export const startScan = (drive: string) => invoke<void>("start_scan", { drive });
+export const cancelScan = () => invoke<void>("cancel_scan");
+export const getScan = (drive: string) => invoke<[ScanProgress | null, ScanResult | null]>("get_scan", { drive });
+export const moveFiles = (paths: string[], toDrive: string) => invoke<FileActionResult>("move_files", { paths, toDrive });
+export const recycleFiles = (paths: string[]) => invoke<FileActionResult>("recycle_files", { paths });
+export const boostPreview = () => invoke<BoostPreview>("boost_preview");
+export const runBoost = (plan: BoostPlan) => invoke<BoostResult>("run_boost", { plan });
+export const restorePower = () => invoke<void>("restore_power");
 

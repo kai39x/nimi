@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Nimi } from "@/features/character/Nimi";
 import { MusicTab } from "@/features/music/Music";
+import { SystemTab } from "@/features/system/SystemTab";
 import { Icon } from "@/components/Icon";
 import { useT, type TKey } from "@/i18n";
 import { openSettingsWindow } from "@/ipc/commands";
@@ -11,8 +12,7 @@ import { moodLabel } from "./moodLabels";
 import { TabBar, type TabId } from "./TabBar";
 import "./panel.css";
 
-const COMING: Record<Exclude<TabId, "home" | "music">, TKey> = {
-  system: "panel.soon.system",
+const COMING: Record<Exclude<TabId, "home" | "music" | "system">, TKey> = {
   shortcuts: "panel.soon.shortcuts",
   notifications: "panel.soon.notifications",
   games: "panel.soon.games",
@@ -78,6 +78,8 @@ export function Panel({
       <div className="panel__body">
         {tab === "home" ? (
           <HomeTab mood={mood} />
+        ) : tab === "system" ? (
+          <SystemTab />
         ) : tab === "music" ? (
           <MusicTab nimi={<Nimi mood="bored" size={56} idleBehaviors={false} reducedMotion={settings?.reduceMotion ?? false} />} />
         ) : (

@@ -132,6 +132,27 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
   played in the built-in browser pane, shows up as a full SMTC session.
 - One exception in the shared frame loop used to stop every NIMI; the loop now catches per engine.
 
+### What phase 5 taught us (system, and two engine bugs it exposed)
+
+- **No CSS animation may stay on screen at idle.** Any running CSS animation (even a compositor
+  one like Nuri's glow) makes Chromium draw the whole transparent 4K overlay on every vsync
+  (144/s). Nuri's glow and roll are now driven by `engine.ts` at its own 30 / 60 steps → 52
+  draws/s and idle ≈ 8–10 % of one core (was ≈ 30 %), stable run to run.
+- **The engine loop multiplied.** A tween or mood switch started inside a frame called `kick()`
+  while no rAF/timer was pending, starting a second chain next to the running one; chains kept
+  piling up (~400 steps/s). `loop()` now sets `inLoop` and refuses to chain twice. Phase 4's
+  noisy CPU numbers were partly this.
+- **Bidi**: a Latin value inside an Arabic sentence («864 GB من 953 GB», «C:\», «G:») must be its
+  own isolated run — `<bdi dir="ltr">` in JSX (`Fill` in LargestFiles.tsx), U+2068…U+2069 in
+  plain strings.
+- **The panel is 620 px tall** (spec) and the overlay window 720 px, so board 12's taller System
+  layout is compressed to fit; `.sys` scrolls as a fallback (English wraps a little more).
+- Process data without admin: Toolhelp + `K32GetProcessMemoryInfo` (private bytes) +
+  `GetProcessTimes`; GPU % = PDH `GPU Engine` (busiest engine type), VRAM = PDH `GPU Adapter
+  Memory` + DXGI, temperature = `D3DKMTQueryAdapterInfo(ADAPTERPERFDATA)`; SSD = seek-penalty
+  IOCTL on a 0-access volume handle.
+- A full scan of a 1 TB system drive (1.67 M files) takes ~38 s with directory-listing metadata only.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

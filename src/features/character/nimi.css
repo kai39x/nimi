@@ -133,9 +133,9 @@
   will-change: transform;
 }
 
-/* The roll spins the HTML box around its own center (the rig CSS assumes an SVG fill-box). */
-.nimi .n-moon.L-roll,
-.nimi .n-sat-roll.L-roll {
+/* The engine rolls these HTML boxes around their own centers. */
+.nimi .n-moon,
+.nimi .n-sat-roll {
   transform-origin: 50% 50%;
 }
 

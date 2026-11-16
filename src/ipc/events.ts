@@ -12,6 +12,8 @@ export const Events = {
   mediaState: "nimi://media/state",
   mediaArt: "nimi://media/art",
   mediaVolume: "nimi://media/volume",
+  systemStats: "nimi://system/stats",
+  systemScan: "nimi://system/scan",
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

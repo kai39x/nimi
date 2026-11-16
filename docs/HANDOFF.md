@@ -1,14 +1,30 @@
 # Handoff â€” read this first when resuming
 
-## Where we are (2026-11-15, evening)
-- Phases 0â€“3 done آ· `ec27c55` Kai's 3 notes + character v3 + peek mode آ· **phase 4 (Music) built,
-  committed as `phase 4:`, waiting for Kai's OK.** Next after the OK: phase 5 (System). Nothing pushed.
-- Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when asked.
+## Where we are (2026-11-16)
+- Phases 0–4 done and pushed (`bcaaee4` desktop fix, `20381e6` last). **Phase 5 (System) built and
+  committed as `phase 5:`, waiting for Kai's OK.** Next after the OK: phase 6 (Feed & Pocket).
+- Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
+  asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
-  `REFINEMENTS.md`). `python scripts/gen-rig-data.py` regenerates `rig/rigData.ts` (24 moods) after
-  any design change. `engine.ts` = the lab's spring engine on HTML compositor layers.
-- Peek آ«ظٹط·ظ„آ» (REFINEMENTS آ§1): `fullscreen.rs` reports `covered`, the hit-test loop `reveal`,
-  `features/shell/usePeek.ts` decides; `revealCapsule(5000)` is the hook for notifications (phase 8).
+  `REFINEMENTS.md`). `python scripts/gen-rig-data.py` regenerates `rig/rigData.ts` after any design
+  change. `engine.ts` = the lab's spring engine on HTML compositor layers; it also drives Nuri's
+  glow and roll (no idle CSS animations — see PLAN "What phase 5 taught us").
+- Peek «يطل»: `fullscreen.rs` reports `covered`, the hit-test loop `reveal`, `usePeek.ts` decides.
+
+## Phase 5 — system (spec §5, board 12)
+- Rust `system/`: `procs.rs` (user processes: private bytes, CPU time, readable name, category
+  browser / launcher), `stats.rs` (CPU, RAM, GPU via PDH + DXGI + D3DKMT temperature, battery),
+  `drives.rs` (fixed drives, SSD), `scan.rs` (largest files; move to `<drive>\NIMI`, Recycle Bin
+  via `SHFileOperationW` with `FOF_WANTNUKEWARNING`; only files from the last scan, never locked
+  ones), `boost.rs` (preview / run / power plan with restore after 2 h, state in `boost.json`).
+  Sampler: 2 s with the panel open (top apps + GPU), 10 s compact; `nimi://system/stats`.
+- Front `features/system/`: `system.ts` store (60 s history), `SystemTab.tsx`, `Boost.tsx`,
+  `LargestFiles.tsx`. Home's mini bars are live.
+- Boost defaults: temp + Recycle Bin + power ticked (board), apps unticked except background game
+  launchers; apps with any visible window are asked to close and never forced.
+- Not run on Kai's machine: Boost itself (would empty his 35 GB Recycle Bin). Move / recycle were
+  tested on NIMI's own test files only. Kai's PC is already on High performance (line hidden).
+- Open question for Kai: Recycle Bin ticked by default (board) vs unticked.
 
 ## Phase 4 â€” music (spec آ§4, board 07 option B)
 - Rust `media/`: `smtc.rs` (one MTA thread, current session's events â†’ `nimi://media/state`, art once

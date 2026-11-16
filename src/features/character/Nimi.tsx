@@ -81,7 +81,7 @@ export function Nimi({
   const satCount = Math.min(satellites, 8);
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const els = useRef<Partial<NimiElements>>({ sats: [], satFrames: [] });
+  const els = useRef<Partial<NimiElements>>({ sats: [], satFrames: [], satRolls: [] });
   const engine = useRef<NimiEngine | null>(null);
   const slot = <K extends keyof NimiElements>(key: K) => (el: NimiElements[K] | null) => {
     if (el) els.current[key] = el;
@@ -97,6 +97,7 @@ export function Nimi({
     if (!root) return;
     els.current.sats = Array.from(root.querySelectorAll<HTMLElement>(".n-sat"));
     els.current.satFrames = Array.from(root.querySelectorAll<HTMLElement>(".n-sat-frame"));
+    els.current.satRolls = Array.from(root.querySelectorAll<HTMLElement>(".n-sat-roll"));
   }, [satCount]);
 
   useLayoutEffect(() => {
@@ -199,7 +200,7 @@ export function Nimi({
             <div className="n-layer n-nuri-frame" ref={slot("nuriFrame")}>
               {/* glow pulse and roll are on HTML wrappers so they run on the compositor */}
               <div className="n-nuri" ref={slot("nuri")}>
-                <div className="n-glow L-glow">
+                <div className="n-glow" ref={slot("glow")}>
                   <svg viewBox="-24 -24 48 48" aria-hidden="true">
                     <defs>
                       <radialGradient id={`${gid}g`}>
@@ -210,7 +211,7 @@ export function Nimi({
                     <circle r={24} fill={`url(#${gid}g)`} />
                   </svg>
                 </div>
-                <div className="n-moon L-roll">
+                <div className="n-moon" ref={slot("moonRoll")}>
                   <svg viewBox="-16 -16 32 32" aria-hidden="true">
                     <g ref={slot("moonArt")} />
                   </svg>
@@ -221,7 +222,7 @@ export function Nimi({
             {Array.from({ length: satCount }, (_, i) => (
               <div key={i} className="n-layer n-sat-frame">
                 <div className="n-sat">
-                  <div className="n-sat-roll L-roll">
+                  <div className="n-sat-roll">
                     <svg viewBox="-10 -10 20 20" aria-hidden="true">
                       {SAT_ART[i % SAT_ART.length]}
                     </svg>
