@@ -1,4 +1,4 @@
-﻿# Handoff â€” read this first when resuming
+# Handoff â€” read this first when resuming
 
 ## Where we are (2026-11-15, evening)
 - Phases 0â€“3 done آ· `ec27c55` Kai's 3 notes + character v3 + peek mode آ· **phase 4 (Music) built,
