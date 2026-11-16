@@ -1,9 +1,9 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-16)
-- Phases 0–6.1 done and pushed (`95e3467` phase 6.1). **Phase 7 (shortcuts, timer, command bar)
-  is built and tested, not committed yet: waiting for Kai to try it and OK it; then commit
-  `phase 7:` and start phase 8 (notifications).**
+- Phases 0–6.1 done and pushed (`95e3467` phase 6.1). Phase 7 (shortcuts, timer, command bar)
+  committed as `4ed926e` after Kai's OK, **not pushed**. Next: phase 8 (notifications) when Kai
+  says go.
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
