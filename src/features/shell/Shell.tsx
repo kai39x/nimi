@@ -424,7 +424,7 @@ export function Shell() {
         className={[
           "shell",
           mode === "panel"
-            ? "shell--panel" + (tab === "shortcuts" || tab === "notifications" ? " shell--tall" : "")
+            ? "shell--panel" + (tab === "shortcuts" || tab === "notifications" || tab === "games" ? " shell--tall" : "")
             : mode === "command"
               ? "shell--command"
               : mode === "island"

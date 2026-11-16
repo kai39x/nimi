@@ -2,6 +2,7 @@
 import type { CapsuleStyle } from "./CapsuleStyle";
 import type { CommandHotkey } from "./CommandHotkey";
 import type { Favorite } from "./Favorite";
+import type { GameScores } from "./GameScores";
 import type { Language } from "./Language";
 import type { NotifyWatch } from "./NotifyWatch";
 import type { NuriActivity } from "./NuriActivity";
@@ -90,6 +91,10 @@ dnd: boolean,
  * «وش يراقب»: which events make notifications.
  */
 notifyWatch: NotifyWatch, 
+/**
+ * Best scores of the three games (kept on this PC only).
+ */
+games: GameScores, 
 /**
  * The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
  */

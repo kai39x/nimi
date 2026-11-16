@@ -138,6 +138,8 @@ pub struct Settings {
     pub dnd: bool,
     /// «وش يراقب»: which events make notifications.
     pub notify_watch: NotifyWatch,
+    /// Best scores of the three games (kept on this PC only).
+    pub games: GameScores,
     /// The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
     pub screenshot_folder: String,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
@@ -173,6 +175,7 @@ impl Default for Settings {
             screenshot_folder: String::new(),
             dnd: false,
             notify_watch: NotifyWatch::default(),
+            games: GameScores::default(),
             first_run_ms: 0,
         }
     }
@@ -1573,6 +1576,17 @@ pub struct Notification {
     pub percent: Option<f64>,
     pub round: Option<u32>,
     pub rounds: Option<u32>,
+}
+
+/// Best scores (board 15): stars caught ×10, stars hit, and the fastest memory game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct GameScores {
+    pub star_catch: u32,
+    pub moon_toss: u32,
+    /// Milliseconds; 0 = never finished.
+    pub memory_ms: u32,
 }
 
 /// «وش يراقب» (board 14): each watched event can be turned off.

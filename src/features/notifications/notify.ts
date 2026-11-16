@@ -139,7 +139,14 @@ export function describe(n: Notification, t: (k: TKey) => string, lang: Lang): D
         action: { label: t("notify.act.newTimer"), run: () => shellActions.openCommand(lang === "ar" ? "مؤقت " : "timer ") },
       };
     case "pomodoroBreak":
-      return { icon: "timer", title: t("notify.pomoBreak"), sub: r("notify.pomo.sub"), capsuleSub: r("notify.pomo.sub"), action: timerTab };
+      // Spec §5: games are suggested during Pomodoro breaks.
+      return {
+        icon: "game",
+        title: t("notify.pomoBreak"),
+        sub: r("notify.pomo.sub"),
+        capsuleSub: t("notify.pomoBreak.play"),
+        action: { label: t("notify.act.play"), run: () => shellActions.openTab("games") },
+      };
     case "pomodoroWork":
       return { icon: "timer", title: r("notify.pomoWork"), sub: r("notify.pomo.sub"), capsuleSub: r("notify.pomo.sub"), action: timerTab };
     case "pomodoroDone":

@@ -1,0 +1,356 @@
+/* «ألعاب» tab (spec §5, board 15): the stage on top, three game cards under it. */
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--n-r-card);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(120, 110, 220, 0.28), transparent 60%),
+    linear-gradient(180deg, #23214a 0%, #151431 100%);
+  box-shadow: inset 0 0 0 1px rgba(180, 192, 255, 0.12);
+  overflow: hidden;
+  user-select: none;
+}
+
+.stage__hud {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  pointer-events: none;
+}
+
+.stage__hud button {
+  pointer-events: auto;
+}
+
+.stage__score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.stage__score b {
+  font-size: var(--n-fs-number);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage__score span {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
+
+.stage__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stage__lives {
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* Nuri's three lives: little moons; a lost one goes grey. */
+.life {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 36%, #f2cf73 0 16%, transparent 17%),
+    radial-gradient(circle at 70% 68%, #f2cf73 0 12%, transparent 13%),
+    var(--n-butter);
+  box-shadow: 0 0 8px rgba(255, 231, 160, 0.45);
+}
+
+.life.is-lost {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.stage__pause {
+  width: 32px;
+  height: 32px;
+}
+
+.stage__game {
+  position: absolute;
+  inset: 0;
+}
+
+.game-play {
+  position: absolute;
+  inset: 0;
+}
+
+.game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sc-nimi {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.mt-nimi {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Moon Toss draws its own Nuri (the one you throw). */
+.mt-nimi .n-nuri-frame {
+  display: none;
+}
+
+.stage__hint {
+  position: absolute;
+  bottom: 10px;
+  inset-inline-end: 16px;
+  z-index: 3;
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+  pointer-events: none;
+  /* A reminder for the first seconds only; then it would sit on NIMI. */
+  animation: hint-out 600ms ease 4s forwards;
+}
+
+@keyframes hint-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.stage__cover {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.stage__cover--dim {
+  background: rgba(10, 10, 22, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.stage__nimi {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 4px;
+}
+
+.stage__go {
+  margin-top: 10px;
+  gap: 6px;
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Expression Memory: 6 × 2 cards that flip --------------------------------------------- */
+.mem {
+  display: grid;
+  place-items: center;
+  padding: 52px 18px 14px;
+}
+
+.mem__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 74px);
+  grid-auto-rows: 74px;
+  gap: 10px;
+}
+
+.mem__card {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  perspective: 600px;
+}
+
+.mem__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  transition: transform 320ms var(--n-ease-out);
+}
+
+.mem__face--back {
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  color: var(--n-butter);
+}
+
+.mem__card:hover .mem__face--back {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.mem__face--front {
+  background: rgba(180, 192, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(180, 192, 255, 0.3);
+  transform: rotateY(180deg);
+}
+
+.mem__face--front img {
+  width: 60px;
+  height: 60px;
+}
+
+.mem__card.is-open .mem__face--back {
+  transform: rotateY(-180deg);
+}
+
+.mem__card.is-open .mem__face--front {
+  transform: rotateY(0);
+}
+
+.mem__card.is-done .mem__face--front {
+  background: rgba(159, 240, 208, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(159, 240, 208, 0.45);
+}
+
+/* --- the three cards --------------------------------------------------------------------- */
+.games__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.gcard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.gcard.is-active {
+  box-shadow: inset 0 0 0 1px rgba(255, 231, 160, 0.3);
+}
+
+.gcard__art {
+  position: relative;
+  height: 62px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #23214a, #151431);
+  overflow: hidden;
+}
+
+.gcard__nimi {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  translate: -50% 0;
+  width: 44px;
+  height: 44px;
+}
+
+.gcard__nimi--start {
+  left: auto;
+  inset-inline-end: 12%;
+  translate: 0 0;
+}
+
+[dir="rtl"] .gcard__nimi--start {
+  inset-inline-end: auto;
+  left: 12%;
+}
+
+.gcard__star {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--n-butter);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 4px rgba(255, 231, 160, 0.7));
+}
+
+.gcard__arc {
+  position: absolute;
+  left: 32%;
+  right: 22%;
+  top: 22%;
+  height: 70%;
+  border-top: 2px dotted rgba(255, 231, 160, 0.7);
+  border-radius: 50% 50% 0 0;
+}
+
+.gcard__grid {
+  position: absolute;
+  inset: 6px 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.gcard__grid img,
+.gcard__back {
+  width: 100%;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.gcard__text .card__title {
+  font-size: var(--n-fs-label);
+}
+
+.gcard__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gcard__best {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--n-fs-caption);
+  color: var(--n-butter);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcard__play {
+  flex: 1;
+  justify-content: center;
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-text);
+  cursor: pointer;
+}
+
+.gcard__play.chip--butter {
+  background: var(--n-butter);
+  color: var(--n-bg);
+}

@@ -1,8 +1,20 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-16)
-- Phases 0–7 done and pushed (`fbca21c`). Phase 8 (notifications) committed after Kai's OK,
-  **not pushed**. Next: phase 9 (games) when Kai says go.
+- Phases 0–8 done and pushed (`dd3a3c4`). Phase 9 (games) committed after Kai's OK, **not
+  pushed**. Next: phase 10 (settings, onboarding, sounds, i18n, release) when Kai says go.
+
+## Phase 9 — games (spec §5 «ألعاب», board 15)
+- `features/games/`: `engine.ts` (frame loop only while playing, «NIMI يلعب معك» flag, canvas
+  helpers: stars, meteors, Nuri), `StarCatch.tsx` (← → / mouse, stars +10, meteors take one of 3
+  moons, 90 s, harder over time), `MoonToss.tsx` (Nuri orbits; click / Space throws it along the
+  tangent with gravity; every star sits on a reachable path; short aiming dots that shrink with the
+  score; 3 misses, 120 s; the rig's own Nuri is hidden there), `ExpressionMemory.tsx` (12 cards,
+  six NIMI faces, time = score), `GamesTab.tsx` (HUD, covers for ready / paused / over, cards).
+- Best scores in `Settings.games` (this PC only); a record → «رقم جديد!» and NIMI celebrates.
+  The Pomodoro break notification now offers «العب». The panel is tall on this tab too.
+- Tested: each game played (Star Catch to game over + record, Moon Toss throws / misses, Memory
+  solved + record); the test records were reset to 0.
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
