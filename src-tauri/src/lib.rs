@@ -9,6 +9,7 @@ mod files;
 mod hotkeys;
 mod ipc;
 mod media;
+mod notify;
 mod pocket;
 mod settings;
 mod system;
@@ -115,6 +116,12 @@ pub fn run() {
             ipc::command_bar_opened,
             ipc::pick_screenshot_folder,
             ipc::screenshot_default_folder,
+            ipc::notify_list,
+            ipc::notify_dismiss,
+            ipc::notify_clear,
+            ipc::notify_read_all,
+            ipc::open_settings_page,
+            ipc::dev_notify,
             ipc::dev_window_flags,
             ipc::dev_hittest_state,
         ])
@@ -152,6 +159,7 @@ pub fn run() {
             system::spawn(handle);
             pocket::spawn(handle);
             tools::spawn(handle);
+            notify::spawn(handle);
             hotkeys::spawn(handle, current.command_hotkey);
             files::drop::install(handle);
             {

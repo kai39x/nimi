@@ -1,9 +1,8 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-16)
-- Phases 0–6.1 done and pushed (`95e3467` phase 6.1). Phase 7 (shortcuts, timer, command bar)
-  committed as `4ed926e` after Kai's OK, **not pushed**. Next: phase 8 (notifications) when Kai
-  says go.
+- Phases 0–7 done and pushed (`fbca21c`). Phase 8 (notifications) committed after Kai's OK,
+  **not pushed**. Next: phase 9 (games) when Kai says go.
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
@@ -11,6 +10,28 @@
   change. `engine.ts` = the lab's spring engine on HTML compositor layers; it also drives Nuri's
   glow and roll (no idle CSS animations — see PLAN "What phase 5 taught us").
 - Peek «يطل»: `fullscreen.rs` reports `covered`, the hit-test loop `reveal`, `usePeek.ts` decides.
+
+## Phase 8 — notifications (spec §5 «تنبيهات», boards 06 «تنبيه», 11 alert, 14)
+- Rust `notify/`: `mod.rs` keeps the list (newest first, 7 days, ≤ 60, `notifications.json` in
+  app-local data), the level per kind (`level_of`), the «وش يراقب» switches, the tray state (DND >
+  unread dot > normal); `watch.rs`: drives < 10 % + CPU/RAM ≥ 85 % for 5 min (95 % → important)
+  from the system sampler, Downloads (`ReadDirectoryChangesW`, skips partial files and NIMI's own
+  outputs via `mark_own`), USB volumes (`WM_DEVICECHANGE` through `window/subclass.rs`), network
+  (Network List Manager, 5 s poll, loss after two misses), battery on laptops. `tools/timer.rs`
+  reports every finished stretch. Low disk / battery is not repeated within 24 h (even across
+  restarts). Rust sends facts; `features/notifications/notify.ts` writes the sentences.
+- Front: `NotificationsTab` (board 14), `NoticeCapsule` + Shell: هادي = expression only, عادي =
+  capsule grows for 5 s, مهم = double nudge and stays until clicked (also after a restart; an
+  عادي one borrows the capsule and hands it back). Click → list; the button runs the action.
+  «لا تزعجني» = list only. Status pill «NIMI عنده N تنبيهات», tab badge, Home alert card. Phase
+  7's timer pill is replaced by these notifications. Settings «التنبيهات»: DND + 7 switches.
+  The settings content pane now scrolls (Kai couldn't reach the last switches: `.settings__main`
+  needed `min-height: 0`). Kai saw faint hard dark edges round the settings window: the token
+  shadow (30 px down, 80 px blur) was cut at the window rectangle. The settings window and the
+  panel now use a shadow that ends inside their window (the tall panel is 656 px for the room).
+- Tested: real DiskLow (C: at 7 %), real Download (own test file, recycled), real timer, levels
+  via `dev_notify` (debug only), DND, tab / Home / settings. Not testable here: USB, network loss,
+  5-minute CPU/RAM, battery (desktop).
 
 ## Phase 7 — shortcuts & command bar (spec §5 «اختصارات», §8; boards 10, 13)
 - Rust `tools/`: `timer.rs` (main countdown or Pomodoro 25/5 × 4, plus reminders; one thread,

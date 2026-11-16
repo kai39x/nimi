@@ -1,0 +1,276 @@
+/* «تنبيهات» tab (spec §5, board 14). Level colors: هادي mint · عادي butter · مهم coral. */
+.nt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s3);
+  height: 100%;
+}
+
+.nt__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nt__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--n-s3);
+}
+
+.nt__dnd {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--n-s2);
+  font-size: var(--n-fs-label);
+  color: var(--n-text);
+}
+
+.nt__clear {
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  color: var(--n-text);
+  cursor: pointer;
+}
+
+.nt__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  margin-inline-end: -6px;
+  padding-inline-end: 6px;
+}
+
+.nt__day {
+  margin: var(--n-s3) 0 var(--n-s2);
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-muted);
+}
+
+.nt__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nt-row {
+  --tone: var(--n-butter);
+  display: flex;
+  align-items: center;
+  gap: var(--n-s3);
+  min-height: 64px;
+  padding: 10px var(--n-s4);
+  border-radius: 18px;
+  background: var(--n-fill);
+  box-shadow: inset 0 0 0 1px var(--n-line);
+}
+
+.nt-row--calm {
+  --tone: var(--n-ok);
+}
+
+.nt-row--important {
+  --tone: var(--n-danger);
+}
+
+.nt-row__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+  opacity: 0;
+}
+
+/* Board 14: important and normal notes keep their colored dot; calm ones show it while unread. */
+.nt-row--important .nt-row__dot,
+.nt-row--normal .nt-row__dot,
+.nt-row.is-unread .nt-row__dot {
+  opacity: 1;
+}
+
+.nt-row__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  color: var(--tone);
+}
+
+.nt-row--calm .nt-row__icon {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--n-text);
+}
+
+.nt-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nt-row__title {
+  font-size: var(--n-fs-body);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nt-row__sub {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nt-row__time {
+  flex: none;
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
+
+.nt-row__act {
+  flex: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-text);
+  cursor: pointer;
+}
+
+.nt-row__x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+
+.nt__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.nt__empty-nimi {
+  width: 92px;
+  height: 92px;
+  margin-bottom: var(--n-s2);
+}
+
+/* --- the capsule showing a notification (board 06 «تنبيه»): NIMI · title + line · «فتح» --- */
+.shell--capsule.shell--notice {
+  width: calc(330px * var(--nimi-scale));
+  height: calc(60px * var(--nimi-scale));
+}
+
+[dir="rtl"] .shell--notice .shell__nimi {
+  left: calc(38px * var(--nimi-scale));
+}
+
+[dir="ltr"] .shell--notice .shell__nimi {
+  left: calc(100% - 38px * var(--nimi-scale));
+}
+
+.peek-strip--notice {
+  width: calc(330px * var(--nimi-scale));
+}
+
+.notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--nimi-scale));
+  padding-inline: calc(12px * var(--nimi-scale)) calc(76px * var(--nimi-scale));
+  animation: music-in 220ms var(--n-ease-out) 120ms both;
+}
+
+.notice__act {
+  flex: none;
+  order: 0;
+  padding: calc(6px * var(--nimi-scale)) calc(12px * var(--nimi-scale));
+  border: 0;
+  border-radius: 999px;
+  background: var(--n-fill-hover);
+  color: var(--n-text);
+  font: inherit;
+  font-size: calc(12px * var(--nimi-scale));
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.notice__act:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.notice__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: start;
+}
+
+[dir="rtl"] .notice__text {
+  text-align: right;
+}
+
+.notice__title {
+  font-size: calc(13px * var(--nimi-scale));
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice__sub {
+  font-size: calc(11px * var(--nimi-scale));
+  color: var(--n-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice--important .notice__title {
+  color: var(--n-danger);
+}
+
+/* «مهم»: a nudge, twice (board 14: «ينبّه بنطتين»). */
+.shell--nudge {
+  animation: nudge 900ms var(--n-ease-out) 1;
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translateY(5px);
+  }
+  24% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(5px);
+  }
+  52% {
+    transform: none;
+  }
+}

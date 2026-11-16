@@ -153,6 +153,7 @@ fn save(app: &AppHandle, image: Image) {
     let Some(target) = target else {
         return; // «إلغاء» in the dialog: the picture stays on the clipboard
     };
+    crate::notify::watch::mark_own(std::slice::from_ref(&target));
     let result = write(&image, &target);
     if let Err(err) = &result {
         log::warn!("screenshot: could not save {}: {err}", target.display());

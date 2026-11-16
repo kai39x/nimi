@@ -429,3 +429,35 @@
   inset: 0;
   z-index: 5;
 }
+
+/* Unread notifications: the status dot turns coral (board 14). */
+.status-pill--alert .status-pill__dot {
+  background: var(--n-danger);
+  box-shadow: 0 0 8px var(--n-danger);
+}
+
+/* Home's alert card is a button to the notifications tab. */
+button.card.alert {
+  width: 100%;
+  border: 0;
+  color: var(--n-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.alert__more {
+  margin-inline-start: auto;
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
+
+.alert__icon--important {
+  background: rgba(255, 155, 155, 0.15);
+  color: var(--n-danger);
+}
+
+.alert__icon--normal {
+  background: rgba(255, 231, 160, 0.15);
+  color: var(--n-butter);
+}

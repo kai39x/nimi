@@ -8,6 +8,7 @@ import type { SystemStats } from "@/ipc/generated/SystemStats";
 import { useSettings } from "@/lib/settings";
 import { BoostCard, BoostSheet } from "./Boost";
 import { LargestFiles } from "./LargestFiles";
+import { takeLargestFilesRequest } from "@/features/shell/actions";
 import { appLabel, fmtBytes, fmtPct, HISTORY_MS, useSystem, type Point } from "./system";
 import "./system.css";
 
@@ -19,7 +20,11 @@ import "./system.css";
 export function SystemTab() {
   const t = useT();
   const { stats, history } = useSystem();
-  const [view, setView] = useState<{ kind: "main" } | { kind: "files"; drive: string } | { kind: "boost" }>({ kind: "main" });
+  // A notification («أكبر الملفات» on «مساحة C قربت تخلص») can open the tab straight on a drive.
+  const [view, setView] = useState<{ kind: "main" } | { kind: "files"; drive: string } | { kind: "boost" }>(() => {
+    const drive = takeLargestFilesRequest();
+    return drive ? { kind: "files", drive } : { kind: "main" };
+  });
   const [drive, setDrive] = useState<string | null>(null);
 
   if (view.kind === "files") {

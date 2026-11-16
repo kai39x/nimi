@@ -80,6 +80,14 @@ pub fn launch(target: &str) -> Result<(), String> {
     shell_open(target, None)
 }
 
+/// `ms-settings:network-status` and friends; nothing else goes through here.
+pub fn open_settings_page(page: &str) -> Result<(), String> {
+    if !page.starts_with("ms-settings:") || page.contains(|c: char| c.is_whitespace()) {
+        return Err("bad-page".into());
+    }
+    shell_open(page, None)
+}
+
 pub fn run_shortcut(s: &UserShortcut) -> Result<(), String> {
     let target = s.target.trim();
     match s.kind {

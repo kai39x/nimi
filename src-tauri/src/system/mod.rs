@@ -99,6 +99,7 @@ pub fn spawn(app: &AppHandle) {
                     detailed: open,
                 };
                 *shared.stats.lock().expect("stats lock") = Some(sample.clone());
+                crate::notify::watch::on_stats(&app, &sample);
                 let _ = app.emit(events::SYSTEM_STATS, sample);
 
                 // Sleep until the next tick, but wake at once when the panel opens.

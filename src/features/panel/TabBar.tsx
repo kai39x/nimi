@@ -38,7 +38,7 @@ export function TabBar({
           >
             <Icon name={tab.icon} size={18} />
             <span>{t(tab.label)}</span>
-            {count > 0 && <span className="tabbar__badge">{count}</span>}
+            {count > 0 && <span className="tabbar__badge">{new Intl.NumberFormat(document.documentElement.lang === "ar" ? "ar-EG" : "en-US").format(count)}</span>}
           </button>
         );
       })}

@@ -18,8 +18,8 @@ use windows::{
         UI::{
             Shell::{DefSubclassProc, SetWindowSubclass},
             WindowsAndMessaging::{
-                GetWindowLongPtrW, GWL_EXSTYLE, MA_NOACTIVATE, WM_DISPLAYCHANGE, WM_DPICHANGED,
-                WM_MOUSEACTIVATE, WM_SETTINGCHANGE, WS_EX_NOACTIVATE,
+                GetWindowLongPtrW, GWL_EXSTYLE, MA_NOACTIVATE, WM_DEVICECHANGE, WM_DISPLAYCHANGE,
+                WM_DPICHANGED, WM_MOUSEACTIVATE, WM_SETTINGCHANGE, WS_EX_NOACTIVATE,
             },
         },
     },
@@ -81,6 +81,8 @@ unsafe extern "system" fn subclass_proc(
         // requested explicitly when the panel or the command bar needs it.
         WM_MOUSEACTIVATE if !overlay_focusable(hwnd) => return LRESULT(MA_NOACTIVATE as isize),
         WM_DISPLAYCHANGE => schedule_replace(),
+        // USB drives in / out (the overlay is a top-level window, so it gets the broadcast).
+        WM_DEVICECHANGE => crate::notify::watch::on_device_change(wparam.0, lparam.0),
         WM_DPICHANGED => {
             if let Some(app) = APP.get() {
                 refresh_geometry(app);

@@ -23,6 +23,8 @@ export const Events = {
   pickerDone: "nimi://picker/done",
   pickerOpen: "nimi://picker/open",
   screenshotSaved: "nimi://screenshot/saved",
+  notifyNew: "nimi://notify/new",
+  notifyList: "nimi://notify/list",
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

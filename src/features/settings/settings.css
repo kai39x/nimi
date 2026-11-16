@@ -4,6 +4,14 @@
   inset: 22px;
 }
 
+/* The window is only 22 px bigger than the panel on each side: the token shadow (30 px down, 80 px
+   blur) would be cut at the window edge and show as hard dark edges. A shadow that fits. */
+.settings.n-glass {
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
 .settings {
   width: 100%;
   height: 100%;
@@ -76,6 +84,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* The window has a fixed height: the content pane scrolls instead of growing past it. */
+  min-height: 0;
 }
 
 .settings__header {
@@ -93,8 +103,14 @@
 }
 
 .settings__content {
+  flex: 1;
+  min-height: 0;
   padding: var(--n-s3) var(--n-s6) var(--n-s6);
   overflow-y: auto;
+  scrollbar-width: thin;
+  /* Keep the scrollbar off the glass rim and out of the rounded corner. */
+  margin-inline-end: 10px;
+  margin-bottom: 24px;
 }
 
 .row {
@@ -219,4 +235,11 @@
 .row__buttons {
   display: inline-flex;
   gap: 6px;
+}
+
+.settings__group-title {
+  margin: var(--n-s4) 0 var(--n-s1);
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-muted);
 }

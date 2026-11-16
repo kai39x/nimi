@@ -75,6 +75,7 @@ fn run(app: &AppHandle) {
             let _ = app.emit(events::TIMER_STATE, &snapshot);
             for d in done {
                 let _ = app.emit(events::TIMER_DONE, &d);
+                crate::notify::push(app, as_notification(&d));
             }
             st = sh.state.lock().expect("timer lock");
             continue;
@@ -120,6 +121,23 @@ fn advance(t: &mut TimerInfo, now: i64) -> Option<TimerDone> {
         rounds: t.rounds,
         finished: false,
     })
+}
+
+/// The notifications tab keeps a line for every stretch that ended.
+fn as_notification(d: &TimerDone) -> crate::ipc::Notification {
+    use crate::ipc::NotifyKind;
+    let kind = match (d.kind, d.finished, d.phase) {
+        (TimerKind::Reminder, ..) => NotifyKind::Reminder,
+        (TimerKind::Timer, ..) => NotifyKind::TimerDone,
+        (TimerKind::Pomodoro, true, _) => NotifyKind::PomodoroDone,
+        (TimerKind::Pomodoro, false, TimerPhase::Break) => NotifyKind::PomodoroBreak,
+        (TimerKind::Pomodoro, false, TimerPhase::Work) => NotifyKind::PomodoroWork,
+    };
+    let mut n = crate::notify::notification(kind);
+    n.name = d.label.clone();
+    n.round = Some(d.round);
+    n.rounds = Some(d.rounds);
+    n
 }
 
 fn finished(t: &TimerInfo) -> TimerDone {

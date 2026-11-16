@@ -16,6 +16,8 @@ import type { MediaArt } from "./generated/MediaArt";
 import type { MediaCommand } from "./generated/MediaCommand";
 import type { MediaState } from "./generated/MediaState";
 import type { MicState } from "./generated/MicState";
+import type { Notification } from "./generated/Notification";
+import type { NotifyKind } from "./generated/NotifyKind";
 import type { MonitorInfo } from "./generated/MonitorInfo";
 import type { OverlayVisibility } from "./generated/OverlayVisibility";
 import type { PickerSample } from "./generated/PickerSample";
@@ -121,3 +123,11 @@ export const zipExplorerSelection = () => invoke<FeedResult>("zip_explorer_selec
 export const commandBarOpened = () => invoke<void>("command_bar_opened");
 export const pickScreenshotFolder = () => invoke<string | null>("pick_screenshot_folder");
 export const screenshotDefaultFolder = () => invoke<string | null>("screenshot_default_folder");
+
+// Notifications (phase 8)
+export const notifyList = () => invoke<Notification[]>("notify_list");
+export const notifyDismiss = (id: number) => invoke<Notification[]>("notify_dismiss", { id });
+export const notifyClear = () => invoke<Notification[]>("notify_clear");
+export const notifyReadAll = () => invoke<Notification[]>("notify_read_all");
+export const openSettingsPage = (page: string) => invoke<void>("open_settings_page", { page });
+export const devNotify = (kind: NotifyKind) => invoke<void>("dev_notify", { kind });

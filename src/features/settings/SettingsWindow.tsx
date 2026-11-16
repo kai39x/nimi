@@ -16,13 +16,13 @@ import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import { ALL_TILES } from "@/features/shortcuts/ShortcutsTab";
 import "./settings.css";
 
-type SectionId = "general" | "character" | "capsule" | "feed" | "shortcuts";
+type SectionId = "general" | "character" | "capsule" | "notifications" | "feed" | "shortcuts";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
   { id: "character", icon: "star4", label: "settings.section.character", ready: true },
   { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: true },
-  { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: false },
+  { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: true },
   { id: "feed", icon: "pocket", label: "settings.section.feed", ready: true },
   { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: false },
   { id: "shortcuts", icon: "keyboard", label: "settings.section.shortcuts", ready: true },
@@ -279,6 +279,34 @@ export function SettingsWindow() {
               </Row>
             </section>
           )}
+          {section === "notifications" && (
+            <section className="settings__content">
+              <Row title={t("notify.dnd")} sub={t("settings.dnd.sub")}>
+                <Toggle label={t("notify.dnd")} checked={settings.dnd} onChange={(dnd) => void updateSettings({ dnd })} />
+              </Row>
+              <div className="settings__group-title">{t("settings.watch")}</div>
+              {(
+                [
+                  ["disk", "settings.watch.disk"],
+                  ["load", "settings.watch.load"],
+                  ["timer", "settings.watch.timer"],
+                  ["downloads", "settings.watch.downloads"],
+                  ["usb", "settings.watch.usb"],
+                  ["network", "settings.watch.network"],
+                  ["battery", "settings.watch.battery"],
+                ] as const
+              ).map(([key, label]) => (
+                <Row key={key} title={t(label)} sub={key === "battery" ? t("settings.watch.battery.sub") : undefined}>
+                  <Toggle
+                    label={t(label)}
+                    checked={settings.notifyWatch[key]}
+                    onChange={(on) => void updateSettings({ notifyWatch: { ...settings.notifyWatch, [key]: on } })}
+                  />
+                </Row>
+              ))}
+            </section>
+          )}
+
           {section === "shortcuts" && (
             <section className="settings__content">
               <Row title={t("settings.hotkey")} sub={t("settings.hotkey.sub")}>

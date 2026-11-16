@@ -50,6 +50,10 @@ pub mod events {
     pub const PICKER_DONE: &str = "nimi://picker/done";
     /// `{ Ok: path } | { Err: code }`: a screenshot taken through NIMI was saved (or failed).
     pub const SCREENSHOT_SAVED: &str = "nimi://screenshot/saved";
+    /// [`Notification`]: a new one (the capsule shows it by its level).
+    pub const NOTIFY_NEW: &str = "nimi://notify/new";
+    /// `Vec<Notification>` after any change (newest first).
+    pub const NOTIFY_LIST: &str = "nimi://notify/list";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -130,6 +134,10 @@ pub struct Settings {
     pub clipboard_history: bool,
     /// «وين تنحفظ اللقطة»: what happens to a screenshot taken through NIMI.
     pub screenshot_save: ScreenshotSave,
+    /// «لا تزعجني»: notifications only go to the list (no capsule, no sounds, no expressions).
+    pub dnd: bool,
+    /// «وش يراقب»: which events make notifications.
+    pub notify_watch: NotifyWatch,
     /// The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
     pub screenshot_folder: String,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
@@ -163,6 +171,8 @@ impl Default for Settings {
             clipboard_history: true,
             screenshot_save: ScreenshotSave::Ask,
             screenshot_folder: String::new(),
+            dnd: false,
+            notify_watch: NotifyWatch::default(),
             first_run_ms: 0,
         }
     }
@@ -1002,11 +1012,14 @@ pub async fn feed_run(
     text: Option<String>,
     target: Option<String>,
 ) -> Result<FeedResult, String> {
-    tauri::async_runtime::spawn_blocking(move || {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         files::run(&app, action, &paths, text.as_deref(), target.as_deref())
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())??;
+    // A result saved into Downloads is not «تنزيل جديد».
+    crate::notify::watch::mark_own(&result.outputs);
+    Ok(result)
 }
 
 /// «نسخ النص» on a text result (OCR, PDF text).
@@ -1064,6 +1077,7 @@ pub async fn pocket_run(
     })
     .await
     .map_err(|e| e.to_string())??;
+    crate::notify::watch::mark_own(&result.outputs);
     if action == FeedAction::Move {
         pocket::refresh(&app);
     }
@@ -1488,6 +1502,143 @@ pub fn screenshot_default_folder() -> Option<String> {
 #[tauri::command]
 pub fn command_bar_opened() {
     tools::warm();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Notifications (phase 8, spec §5 «تنبيهات», board 14)
+
+/// The three levels (board 14): هادي = expression only · عادي = the capsule grows for 5 s ·
+/// مهم = a nudge, and the capsule stays open until clicked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum NotifyLevel {
+    Calm,
+    Normal,
+    Important,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum NotifyKind {
+    /// A fixed drive under 10 % free.
+    DiskLow,
+    /// CPU above 85 % (95 % → important) for 5 minutes.
+    CpuHigh,
+    /// RAM above 85 % for 5 minutes.
+    RamHigh,
+    TimerDone,
+    /// Pomodoro: a work round ended, the break starts.
+    PomodoroBreak,
+    /// Pomodoro: the break ended, the next round starts.
+    PomodoroWork,
+    /// Pomodoro: all rounds done.
+    PomodoroDone,
+    Reminder,
+    /// A new file finished arriving in Downloads.
+    Download,
+    UsbIn,
+    UsbOut,
+    NetLost,
+    NetBack,
+    /// Laptops only.
+    BatteryLow,
+    PowerIn,
+    PowerOut,
+}
+
+/// One notification. Rust sends facts (`kind` + data); the frontend writes the sentence.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct Notification {
+    #[ts(type = "number")]
+    pub id: u64,
+    pub kind: Option<NotifyKind>,
+    pub level: Option<NotifyLevel>,
+    #[ts(type = "number")]
+    pub at_ms: i64,
+    pub read: bool,
+    /// Drive letter («C:»), file name, app name, USB label, reminder text, Wi-Fi name…
+    pub name: Option<String>,
+    /// A path to open (the download, the USB drive).
+    pub path: Option<String>,
+    /// Bytes: free space, file size, RAM used by the top app.
+    #[ts(type = "number | null")]
+    pub size: Option<u64>,
+    #[ts(type = "number | null")]
+    pub total: Option<u64>,
+    /// 0–100.
+    pub percent: Option<f64>,
+    pub round: Option<u32>,
+    pub rounds: Option<u32>,
+}
+
+/// «وش يراقب» (board 14): each watched event can be turned off.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export)]
+pub struct NotifyWatch {
+    pub disk: bool,
+    pub load: bool,
+    pub timer: bool,
+    pub downloads: bool,
+    pub usb: bool,
+    pub network: bool,
+    pub battery: bool,
+}
+
+impl Default for NotifyWatch {
+    fn default() -> Self {
+        Self {
+            disk: true,
+            load: true,
+            timer: true,
+            downloads: true,
+            usb: true,
+            network: true,
+            battery: true,
+        }
+    }
+}
+
+#[tauri::command]
+pub fn notify_list(app: AppHandle) -> Vec<Notification> {
+    crate::notify::list(&app)
+}
+
+#[tauri::command]
+pub fn notify_dismiss(app: AppHandle, id: u64) -> Vec<Notification> {
+    crate::notify::dismiss(&app, id)
+}
+
+/// «مسح الكل».
+#[tauri::command]
+pub fn notify_clear(app: AppHandle) -> Vec<Notification> {
+    crate::notify::clear(&app)
+}
+
+/// The notifications tab was looked at.
+#[tauri::command]
+pub fn notify_read_all(app: AppHandle) -> Vec<Notification> {
+    crate::notify::read_all(&app)
+}
+
+/// Opens a Windows settings page (`ms-settings:…` only) for a notification's action.
+#[tauri::command]
+pub fn open_settings_page(page: String) -> Result<(), String> {
+    tools::open_settings_page(&page)
+}
+
+/// Dev builds only: fakes one notification of `kind` (to see each level without waiting).
+#[tauri::command]
+pub fn dev_notify(app: AppHandle, kind: NotifyKind) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("dev builds only".into());
+    }
+    crate::notify::dev_fake(&app, kind);
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -3,6 +3,9 @@ import { Nimi } from "@/features/character/Nimi";
 import { MusicTab } from "@/features/music/Music";
 import { SystemTab } from "@/features/system/SystemTab";
 import { ShortcutsTab } from "@/features/shortcuts/ShortcutsTab";
+import { NotificationsTab } from "@/features/notifications/NotificationsTab";
+import { useNotifications } from "@/features/notifications/notify";
+import { fmtNumber } from "@/lib/format";
 import { Icon } from "@/components/Icon";
 import { useT, type TKey } from "@/i18n";
 import { openSettingsWindow } from "@/ipc/commands";
@@ -13,8 +16,7 @@ import { moodLabel } from "./moodLabels";
 import { TabBar, type TabId } from "./TabBar";
 import "./panel.css";
 
-const COMING: Record<Exclude<TabId, "home" | "music" | "system" | "shortcuts">, TKey> = {
-  notifications: "panel.soon.notifications",
+const COMING: Record<Exclude<TabId, "home" | "music" | "system" | "shortcuts" | "notifications">, TKey> = {
   games: "panel.soon.games",
 };
 
@@ -40,6 +42,7 @@ export function Panel({
   const settings = useSettings();
   const lang = settings?.language ?? "ar";
   const muted = settings?.soundsMuted ?? false;
+  const unread = useNotifications().filter((n) => !n.read).length;
 
   // Keep the content mounted only while open (plus the fade-out), so a closed panel costs nothing.
   const [mounted, setMounted] = useState(open);
@@ -56,9 +59,10 @@ export function Panel({
   return (
     <div className={"panel" + (open ? " is-open" : "")} aria-hidden={!open} inert={!open}>
       <header className="panel__header">
-        <span className="status-pill">
+        {/* Board 14: «NIMI عنده ٣ تنبيهات» while some are unread. */}
+        <span className={"status-pill" + (unread ? " status-pill--alert" : "")}>
           <span className="status-pill__dot" />
-          {t("app.name.latin")} {moodLabel(mood, lang)}
+          {t("app.name.latin")} {unread ? t("notify.pill").replace("{n}", fmtNumber(unread, lang)) : moodLabel(mood, lang)}
         </span>
         <div className="panel__actions">
           <button type="button" className={"icon-btn icon-btn--round" + (muted ? " is-on" : "")} aria-label={t(muted ? "panel.unmute" : "panel.mute")} title={t(muted ? "panel.unmute" : "panel.mute")} onClick={() => void updateSettings({ soundsMuted: !muted })}>
@@ -73,7 +77,7 @@ export function Panel({
         </div>
       </header>
 
-      <TabBar active={tab} onChange={onTab} badges={{ notifications: 0 }} />
+      <TabBar active={tab} onChange={onTab} badges={{ notifications: unread }} />
 
       <div className="panel__body">
         {tab === "home" ? (
@@ -82,6 +86,8 @@ export function Panel({
           <SystemTab />
         ) : tab === "shortcuts" ? (
           <ShortcutsTab />
+        ) : tab === "notifications" ? (
+          <NotificationsTab />
         ) : tab === "music" ? (
           <MusicTab nimi={<Nimi mood="bored" size={56} idleBehaviors={false} reducedMotion={settings?.reduceMotion ?? false} />} />
         ) : (

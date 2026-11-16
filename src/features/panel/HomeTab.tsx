@@ -10,6 +10,8 @@ import { useSystem } from "@/features/system/system";
 import { AppsSheet, Favorites } from "@/features/shortcuts/Favorites";
 import { timerSubtitle } from "@/features/shortcuts/PomodoroCard";
 import { fmtClock, leftMs, timers, useClock, useTimers } from "@/features/shortcuts/timer";
+import { describe, levelOf, topUnread, useNotifications } from "@/features/notifications/notify";
+import { shellActions } from "@/features/shell/actions";
 import { moodLabel, moodLevel } from "./moodLabels";
 import { useEnergy } from "./useEnergy";
 
@@ -39,6 +41,9 @@ export function HomeTab({ mood }: { mood: Mood }) {
   const running = !!main && main.pausedLeftMs == null;
   const now = useClock(running);
   const [picking, setPicking] = useState(false);
+  const notes = useNotifications();
+  const top = topUnread(notes);
+  const others = notes.filter((n) => !n.read).length - (top ? 1 : 0);
 
   return (
     <div className="home">
@@ -138,12 +143,29 @@ export function HomeTab({ mood }: { mood: Mood }) {
         </div>
       )}
 
-      <section className="card alert">
-        <span className="alert__icon">
-          <Icon name="check" size={16} />
-        </span>
-        <span className="alert__text">{t("home.alert.none")}</span>
-      </section>
+      {top ? (
+        (() => {
+          const d = describe(top, t, lang);
+          return (
+            <button type="button" className="card alert" onClick={() => shellActions.openTab("notifications")}>
+              <span className={`alert__icon alert__icon--${levelOf(top)}`}>
+                <Icon name={d.icon} size={16} />
+              </span>
+              <span className="alert__text">
+                {d.title} · {d.capsuleSub.split(" · ")[0]}
+              </span>
+              {others > 0 && <span className="alert__more">{t("home.alert.more").replace("{n}", fmtNumber(others, lang))}</span>}
+            </button>
+          );
+        })()
+      ) : (
+        <section className="card alert">
+          <span className="alert__icon">
+            <Icon name="check" size={16} />
+          </span>
+          <span className="alert__text">{t("home.alert.none")}</span>
+        </section>
+      )}
     </div>
   );
 }

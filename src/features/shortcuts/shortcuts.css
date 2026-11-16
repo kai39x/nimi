@@ -1,6 +1,6 @@
 /* «اختصارات» tab (spec §5, board 13). The panel is a little taller on this tab (shell--tall). */
 .shell--panel.shell--tall {
-  height: 668px;
+  height: 656px;
 }
 
 .sc {

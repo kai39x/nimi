@@ -103,6 +103,9 @@ fn apply_side_effects(app: &AppHandle, before: &Settings, after: &Settings) {
     if before.sounds_muted != after.sounds_muted {
         crate::tray::sync_mute(app);
     }
+    if before.dnd != after.dnd {
+        crate::notify::sync_tray(app);
+    }
     if before.command_hotkey != after.command_hotkey {
         crate::hotkeys::set_mode(after.command_hotkey);
     }

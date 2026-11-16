@@ -4,8 +4,7 @@ import { focusOverlay, recenterOverlay, setOverlayExpanded, toolRun } from "@/ip
 import { Events, onEvent } from "@/ipc/events";
 import { useT } from "@/i18n";
 import type { CapsuleStyle } from "@/ipc/generated/CapsuleStyle";
-import type { TimerDone } from "@/ipc/generated/TimerDone";
-import { fmtNumber } from "@/lib/format";
+import type { Notification } from "@/ipc/generated/Notification";
 import { useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
 import { refreshHitRects, useHitRect } from "@/features/overlay/hitRects";
@@ -20,7 +19,9 @@ import { FeedLayer, useFeedZones } from "@/features/feed/FeedLayer";
 import { PocketTray, usePocket } from "@/features/pocket/Pocket";
 import type { TabId } from "@/features/panel/TabBar";
 import { CommandBar, type Outcome } from "@/features/commandbar/CommandBar";
-import { onTimerDone, useTimers } from "@/features/shortcuts/timer";
+import { useTimers } from "@/features/shortcuts/timer";
+import { NoticeCapsule } from "@/features/notifications/NoticeCapsule";
+import { levelOf, moodFor, onNotifyNew, useNotifications } from "@/features/notifications/notify";
 import { TimerCapsule } from "@/features/shortcuts/TimerCapsule";
 import { TimerPill } from "@/features/shortcuts/TimerPill";
 import { onShellRequest } from "./actions";
@@ -69,7 +70,6 @@ export function Shell() {
   const ref = useRef<HTMLDivElement>(null);
   const t = useT();
   const settings = useSettings();
-  const lang = settings?.language ?? "ar";
   const drag = useOverlayDrag();
   const [mode, setMode] = useState<Mode>("compact");
   const modeRef = useRef(mode);
@@ -262,9 +262,12 @@ export function Shell() {
       onShellRequest((r) => {
         if (r.kind === "command") openCommand(r.prefill ?? "");
         else if (r.kind === "tool") runTool(r.tool);
-        else flash({ kind: "toast", text: r.text, tone: r.tone }, 2600);
+        else if (r.kind === "tab") {
+          setTab(r.tab);
+          show("panel");
+        } else flash({ kind: "toast", text: r.text, tone: r.tone }, 2600);
       }),
-    [openCommand, runTool, flash],
+    [openCommand, runTool, flash, show],
   );
   // The color picker closed with a color: it is on the clipboard.
   useEffect(
@@ -294,34 +297,86 @@ export function Shell() {
 
   const timersState = useTimers();
   const mainTimer = timersState.main;
-  // A finished timer / reminder stays under the capsule until clicked; a Pomodoro switch is a
-  // normal note (5 s). NIMI hops either way.
-  const [timerAlert, setTimerAlert] = useState<string | null>(null);
+  // --- notifications (phase 8, board 14) ----------------------------------------------------
+  // هادي: an expression only. عادي: the capsule grows with the note for 5 s. مهم: a double nudge
+  // and the note stays until clicked. «لا تزعجني» keeps all of it in the list only.
+  const [notice, setNotice] = useState<Notification | null>(null);
+  const notes = useNotifications();
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
+  const [nudge, setNudge] = useState(0);
+  const noticeTimer = useRef(0);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
+  const clearNotice = useCallback(() => {
+    window.clearTimeout(noticeTimer.current);
+    setNotice(null);
+    setMoodOverride(null);
+  }, []);
   useEffect(
     () =>
-      onTimerDone((d: TimerDone) => {
-        nimiRef.current?.poke();
-        setMoodOverride(d.kind === "pomodoro" && !d.finished && d.phase === "break" ? "happy" : "celebrate", 2400);
-        if (d.kind === "pomodoro" && !d.finished) {
-          const text =
-            d.phase === "break"
-              ? t("timer.done.break")
-              : t("timer.done.work").replace("{r}", fmtNumber(d.round, lang)).replace("{n}", fmtNumber(d.rounds, lang));
-          flash({ kind: "toast", text, icon: "timer", tone: "butter" }, 5000);
+      onNotifyNew((n) => {
+        if (settingsRef.current?.dnd) return;
+        const level = levelOf(n);
+        if (level === "calm") {
+          setMoodOverride(moodFor(n), 2600);
           return;
         }
-        setTimerAlert(
-          d.kind === "reminder"
-            ? t("timer.done.reminder").replace("{s}", d.label ?? "")
-            : d.kind === "pomodoro"
-              ? t("timer.done.pomodoro")
-              : d.label
-                ? t("timer.done.labeled").replace("{s}", d.label)
-                : t("timer.done.timer"),
-        );
+        nimiRef.current?.poke();
+        window.clearTimeout(noticeTimer.current);
+        setNotice(n);
+        if (level === "important") {
+          setMoodOverride("attention", 600_000);
+          setNudge((k) => k + 1);
+        } else {
+          setMoodOverride(moodFor(n), 5000);
+          // After 5 s an unread «مهم» one (if any) takes the capsule back.
+          noticeTimer.current = window.setTimeout(() => {
+            const sticky = notesRef.current.find((x) => !x.read && levelOf(x) === "important") ?? null;
+            setNotice((cur) => (cur?.id === n.id ? sticky : cur));
+            if (sticky) setMoodOverride("attention", 600_000);
+          }, 5000);
+        }
       }),
-    [flash, t, lang],
+    [],
   );
+  // «لا تزعجني» switched on: whatever the capsule shows goes back to the list.
+  const dnd = settings?.dnd ?? false;
+  useEffect(() => {
+    if (dnd) clearNotice();
+  }, [dnd, clearNotice]);
+  // An unread «مهم» one survives a restart; reading or dismissing it in the list clears it here.
+  const restored = useRef(false);
+  const seenInList = useRef(0);
+  useEffect(() => {
+    if (!restored.current && notes.length) {
+      restored.current = true;
+      const pending = notes.find((n) => !n.read && levelOf(n) === "important");
+      if (pending && !settingsRef.current?.dnd) {
+        setNotice(pending);
+        setMoodOverride("attention", 600_000);
+      }
+      return;
+    }
+    if (!notice) return;
+    // The list may arrive a moment after the «new» event: only a notification already seen in the
+    // list and then read or removed clears the capsule.
+    const inList = notes.find((n) => n.id === notice.id);
+    if (inList) {
+      seenInList.current = notice.id;
+      if (inList.read) clearNotice();
+    } else if (seenInList.current === notice.id) clearNotice();
+  }, [notes, notice, clearNotice]);
+  useEffect(() => {
+    if (!nudge) return;
+    const el = ref.current;
+    el?.classList.remove("shell--nudge");
+    void el?.offsetWidth; // restart the animation
+    el?.classList.add("shell--nudge");
+    const id = window.setTimeout(() => el?.classList.remove("shell--nudge"), 950);
+    return () => window.clearTimeout(id);
+  }, [nudge]);
 
   const onWheel = (e: WheelEvent) => {
     // Only the bare capsule is a volume knob: over a feed stage (e.g. a long text result) or the
@@ -333,20 +388,21 @@ export function Shell() {
 
   // «الكبسولة»: the compact look. The panel and the island are always glass with NIMI.
   const capsuleStyle: CapsuleStyle = settings?.capsuleStyle ?? "nimiInCapsule";
-  const nimiShown = expanded || feeding || capsuleStyle !== "capsuleOnly";
+  const noticeLook = !expanded && !feeding && !menuOpen && !!notice;
+  const nimiShown = expanded || feeding || noticeLook || capsuleStyle !== "capsuleOnly";
   const nimiMounted = useFadeMount(nimiShown, NIMI_FADE_MS);
   // A running timer takes the capsule over from the music look (board 13 note).
-  const timerLook = !expanded && !feeding && !!mainTimer && capsuleStyle !== "nimiOnly";
-  const musicLook = !expanded && !feeding && !timerLook && musicActive && capsuleStyle !== "nimiOnly";
+  const timerLook = !expanded && !feeding && !noticeLook && !!mainTimer && capsuleStyle !== "nimiOnly";
+  const musicLook = !expanded && !feeding && !noticeLook && !timerLook && musicActive && capsuleStyle !== "nimiOnly";
 
   // «يطل»: over a maximized window only a 12 px strip stays; it alone takes the mouse.
   // No «يطل» while a job runs behind the capsule (or its result waits): Kai wants to see it working.
-  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg || !!timerAlert || pill?.kind === "toast" });
+  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg || !!notice || pill?.kind === "toast" });
   useHitRect(ref, "shell", !peek);
   useHitRect(stripRef, "peek", peek);
 
   // The hit rect follows the shell box, which changes shape with the style, music and peek.
-  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, timerLook, feed.phase, feed.bg, tab, commandHeight, trackMorph]);
+  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, timerLook, noticeLook, feed.phase, feed.bg, tab, commandHeight, trackMorph]);
 
   const vars = {
     ...(mode === "command" ? { height: commandHeight } : null),
@@ -359,7 +415,7 @@ export function Shell() {
     <>
       <div
         ref={stripRef}
-        className={`peek-strip peek-strip--${capsuleStyle}` + (musicLook ? " peek-strip--music" : "") + (timerLook ? " peek-strip--timer" : "")}
+        className={`peek-strip peek-strip--${capsuleStyle}` + (musicLook ? " peek-strip--music" : "") + (timerLook ? " peek-strip--timer" : "") + (noticeLook ? " peek-strip--notice" : "")}
         style={{ ...vars, height: undefined }}
         aria-hidden="true"
       />
@@ -368,7 +424,7 @@ export function Shell() {
         className={[
           "shell",
           mode === "panel"
-            ? "shell--panel" + (tab === "shortcuts" ? " shell--tall" : "")
+            ? "shell--panel" + (tab === "shortcuts" || tab === "notifications" ? " shell--tall" : "")
             : mode === "command"
               ? "shell--command"
               : mode === "island"
@@ -377,9 +433,10 @@ export function Shell() {
                 ? "shell--pocket"
                 : feeding
                   ? `shell--feed shell--feed-${feed.phase}`
-                  : `shell--capsule shell--${capsuleStyle}`,
+                  : `shell--capsule shell--${noticeLook ? "nimiInCapsule" : capsuleStyle}`,
           musicLook && "shell--music",
           timerLook && "shell--timer",
+          noticeLook && "shell--notice",
           peek && "shell--peek",
           winter && "shell--winter",
         ]
@@ -425,10 +482,12 @@ export function Shell() {
             reopenFeed();
             return;
           }
-          // A finished timer's note: the click just says «تمام».
-          if (timerAlert) {
+          // A notification in the capsule: a click opens the list (its button runs the action).
+          if (notice) {
             window.clearTimeout(pendingOpen.current);
-            setTimerAlert(null);
+            clearNotice();
+            setTab("notifications");
+            show("panel");
             return;
           }
           // A pocket satellite (or the pocket badge) opens the pocket tray (spec §7).
@@ -457,6 +516,7 @@ export function Shell() {
         <div className="shell__glass n-glass" aria-hidden="true" />
         {musicLook && <MusicCapsule nimi={capsuleStyle !== "capsuleOnly"} />}
         {timerLook && mainTimer && <TimerCapsule timer={mainTimer} />}
+        {noticeLook && notice && <NoticeCapsule n={notice} onDone={clearNotice} />}
         {nimiMounted && (
           <div className={"shell__nimi" + (nimiShown ? "" : " is-leaving")} onClick={mode === "panel" ? moodClick : undefined}>
             <Nimi
@@ -498,13 +558,7 @@ export function Shell() {
             <bdi>{t(feed.phase === "working" ? "feed.bg.working" : feed.phase === "result" ? "feed.bg.done" : "feed.bg.failed")}</bdi>
           </CapsulePill>
         )}
-        {!expanded && !peek && !menuOpen && !pill && !feed.bg && timerAlert && (
-          <CapsulePill key="timer-alert" tone="butter">
-            <Icon name="timer" size={14} className="capsule-pill__icon" />
-            <bdi>{timerAlert}</bdi>
-          </CapsulePill>
-        )}
-        {!expanded && !peek && !menuOpen && !pill && !feed.bg && !timerAlert && mainTimer && capsuleStyle === "nimiOnly" && <TimerPill timer={mainTimer} />}
+        {!expanded && !peek && !menuOpen && !pill && !feed.bg && !notice && mainTimer && capsuleStyle === "nimiOnly" && <TimerPill timer={mainTimer} />}
         {!expanded && !peek && !menuOpen && pill && (
           <CapsulePill key={pill.kind + pill.text} tone={pill.kind === "volume" || pill.tone === "butter" ? "butter" : undefined}>
             {pill.icon && <Icon name={pill.icon} size={14} className="capsule-pill__icon" />}

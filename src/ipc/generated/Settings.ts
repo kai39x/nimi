@@ -3,6 +3,7 @@ import type { CapsuleStyle } from "./CapsuleStyle";
 import type { CommandHotkey } from "./CommandHotkey";
 import type { Favorite } from "./Favorite";
 import type { Language } from "./Language";
+import type { NotifyWatch } from "./NotifyWatch";
 import type { NuriActivity } from "./NuriActivity";
 import type { PocketEmpty } from "./PocketEmpty";
 import type { ResultsLocation } from "./ResultsLocation";
@@ -81,6 +82,14 @@ clipboardHistory: boolean,
  * «وين تنحفظ اللقطة»: what happens to a screenshot taken through NIMI.
  */
 screenshotSave: ScreenshotSave, 
+/**
+ * «لا تزعجني»: notifications only go to the list (no capsule, no sounds, no expressions).
+ */
+dnd: boolean, 
+/**
+ * «وش يراقب»: which events make notifications.
+ */
+notifyWatch: NotifyWatch, 
 /**
  * The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
  */
