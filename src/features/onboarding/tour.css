@@ -1,0 +1,147 @@
+/* First-launch tour (board 17): bubbles under the capsule; the whole area takes the mouse. */
+.tour {
+  position: absolute;
+  top: calc(100% + 14px * var(--nimi-scale));
+  left: 50%;
+  translate: -50% 0;
+  width: 360px;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+}
+
+.tour--star {
+  top: -400px;
+  height: 400px;
+}
+
+.tour__star {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--n-butter);
+  box-shadow:
+    0 0 14px 4px rgba(255, 231, 160, 0.7),
+    -60px -40px 30px -10px rgba(255, 231, 160, 0.15);
+  animation: tour-star 1.3s var(--n-ease-in) both;
+}
+
+@keyframes tour-star {
+  from {
+    transform: translate(180px, -360px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+}
+
+.tour__bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  text-align: center;
+  animation: pill-in 220ms var(--n-ease-spring) both;
+}
+
+.tour--hello .tour__bubble {
+  cursor: pointer;
+}
+
+.tour__text {
+  font-size: var(--n-fs-body);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.tour__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tour__btn,
+.tour__go {
+  border: 0;
+  font: inherit;
+  font-size: var(--n-fs-label);
+  font-weight: 600;
+  color: var(--n-text);
+  cursor: pointer;
+}
+
+.tour__btn.is-on,
+.tour__go {
+  background: var(--n-butter);
+  color: var(--n-bg);
+}
+
+.tour__auto {
+  gap: 12px;
+  font-size: var(--n-fs-label);
+}
+
+.tour__skip {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--n-muted);
+  font: inherit;
+  font-size: var(--n-fs-caption);
+  cursor: pointer;
+}
+
+.tour__skip:hover {
+  color: var(--n-text);
+}
+
+/* The demo file (board 17 ④): a small PNG page you drag onto NIMI. */
+.tour__file {
+  width: 44px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 8px;
+  background: #f4f2ff;
+  color: #6a5fb8;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.tour__file span {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--n-rose);
+  color: #fff;
+}
+
+.tour__file.is-dragging {
+  cursor: grabbing;
+  transform: rotate(-6deg) scale(1.05);
+}
+
+/* `.chip.chip--butter` elsewhere colors the text butter too: keep it dark on butter here. */
+.tour .tour__go,
+.tour .tour__btn.is-on {
+  background: var(--n-butter);
+  color: var(--n-bg);
+}

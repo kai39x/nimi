@@ -1,0 +1,67 @@
+# Release: push a tag like v1.0.0 → a GitHub Release with the NSIS installer and the portable exe.
+# The app version comes from src-tauri/tauri.conf.json (and package.json); keep them equal to the tag.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and lint
+        run: |
+          npm run typecheck
+          npm run rust:clippy
+
+      - name: Build (NSIS installer + exe)
+        run: npm run tauri build
+
+      - name: Collect artifacts
+        id: files
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          New-Item -ItemType Directory -Force dist-release | Out-Null
+          Copy-Item src-tauri/target/release/bundle/nsis/*.exe dist-release/
+          Copy-Item src-tauri/target/release/nimi.exe "dist-release/NIMI_${version}_portable.exe"
+          Get-ChildItem dist-release | ForEach-Object { $_.Name }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" dist-release/*.exe `
+            --title "NIMI ${{ steps.files.outputs.version }}" `
+            --notes "NSIS installer (per-user, no admin) and a portable exe. Windows 10 and 11."
+
+      - name: Keep the build (manual runs)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimi-windows
+          path: dist-release/*.exe

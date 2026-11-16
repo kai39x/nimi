@@ -1,3 +1,4 @@
+import { play } from "@/lib/sounds";
 import { useEffect, useRef, useState } from "react";
 import { Nimi } from "@/features/character/Nimi";
 import type { Mood } from "@/features/character/rig/moods";
@@ -130,6 +131,7 @@ export function MoonToss({ paused, onScore, onLives, onOver, onTime }: GameProps
       if (star && Math.hypot(f.p.x - star.x, f.p.y - star.y) < star.r + MOON + 6) {
         st.score += 1;
         onScore(st.score);
+        play("nuri_twinkle");
         st.burst = { x: star.x, y: star.y, t: 0 };
         st.flying = null;
         st.omega = Math.min(3.6, st.omega + 0.12);

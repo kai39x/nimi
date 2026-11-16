@@ -9,6 +9,7 @@ import type { NuriActivity } from "./NuriActivity";
 import type { PocketEmpty } from "./PocketEmpty";
 import type { ResultsLocation } from "./ResultsLocation";
 import type { ScreenshotSave } from "./ScreenshotSave";
+import type { Talkativeness } from "./Talkativeness";
 import type { TileId } from "./TileId";
 import type { UserShortcut } from "./UserShortcut";
 import type { WinterMode } from "./WinterMode";
@@ -95,6 +96,30 @@ notifyWatch: NotifyWatch,
  * Best scores of the three games (kept on this PC only).
  */
 games: GameScores, 
+/**
+ * «مستوى الصوت»: NIMI's own sounds, independent of the system volume (default 40 %).
+ */
+soundVolume: number, 
+/**
+ * «أصوات الأكل والفقاعات».
+ */
+soundFeed: boolean, 
+/**
+ * «تسكت في ملء الشاشة».
+ */
+muteFullscreen: boolean, 
+/**
+ * «كم يتكلم»: his little comment bubbles.
+ */
+talk: Talkativeness, 
+/**
+ * «حالة NIMI في الرئيسية»: the status card on Home.
+ */
+showHomeStatus: boolean, 
+/**
+ * The first-launch tour was seen (or skipped); «شوفها مرة ثانية» clears it.
+ */
+onboarded: boolean, 
 /**
  * The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
  */

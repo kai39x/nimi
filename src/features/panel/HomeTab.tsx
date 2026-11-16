@@ -46,7 +46,8 @@ export function HomeTab({ mood }: { mood: Mood }) {
   const others = notes.filter((n) => !n.read).length - (top ? 1 : 0);
 
   return (
-    <div className="home">
+    <div className={"home" + (settings?.showHomeStatus === false ? " home--no-status" : "")}>
+      {settings?.showHomeStatus !== false && (
       <section className="card status">
         <header className="status__head">
           <div>
@@ -80,6 +81,7 @@ export function HomeTab({ mood }: { mood: Mood }) {
         <Bar value={Math.min(1, meals / 10)} tone="peri" />
         <div className="status__last">{lastAction ? t("home.last").replace("{s}", lastAction) : t("home.last.none")}</div>
       </section>
+      )}
 
       <div className="home__stack">
         <NowPlayingCard />

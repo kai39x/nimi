@@ -461,3 +461,8 @@ button.card.alert {
   background: rgba(255, 231, 160, 0.15);
   color: var(--n-butter);
 }
+
+/* «حالة NIMI في الرئيسية» off: the right column takes the whole width. */
+.home.home--no-status {
+  grid-template-columns: 1fr;
+}

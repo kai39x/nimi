@@ -140,6 +140,18 @@ pub struct Settings {
     pub notify_watch: NotifyWatch,
     /// Best scores of the three games (kept on this PC only).
     pub games: GameScores,
+    /// «مستوى الصوت»: NIMI's own sounds, independent of the system volume (default 40 %).
+    pub sound_volume: f64,
+    /// «أصوات الأكل والفقاعات».
+    pub sound_feed: bool,
+    /// «تسكت في ملء الشاشة».
+    pub mute_fullscreen: bool,
+    /// «كم يتكلم»: his little comment bubbles.
+    pub talk: Talkativeness,
+    /// «حالة NIMI في الرئيسية»: the status card on Home.
+    pub show_home_status: bool,
+    /// The first-launch tour was seen (or skipped); «شوفها مرة ثانية» clears it.
+    pub onboarded: bool,
     /// The folder for `ScreenshotSave::Folder` (and where the dialog opens); empty = Pictures\Screenshots.
     pub screenshot_folder: String,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
@@ -176,6 +188,12 @@ impl Default for Settings {
             dnd: false,
             notify_watch: NotifyWatch::default(),
             games: GameScores::default(),
+            sound_volume: 0.4,
+            sound_feed: true,
+            mute_fullscreen: true,
+            talk: Talkativeness::Few,
+            show_home_status: true,
+            onboarded: false,
             first_run_ms: 0,
         }
     }
@@ -1576,6 +1594,17 @@ pub struct Notification {
     pub percent: Option<f64>,
     pub round: Option<u32>,
     pub rounds: Option<u32>,
+}
+
+/// «كم يتكلم» (board 16): صامت · قليل · ثرثار.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Talkativeness {
+    Silent,
+    #[default]
+    Few,
+    Chatty,
 }
 
 /// Best scores (board 15): stars caught ×10, stars hit, and the fastest memory game.

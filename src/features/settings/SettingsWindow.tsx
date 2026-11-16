@@ -4,7 +4,10 @@ import nimiIdle from "@design/character/svg/nimi_idle.svg";
 import { Icon, type IconName } from "@/components/Icon";
 import { Segmented, Slider, Toggle } from "@/components/controls";
 import { useT, type TKey } from "@/i18n";
-import { clipClear, listMonitors, pickScreenshotFolder, screenshotDefaultFolder } from "@/ipc/commands";
+import { appInfo, clipClear, clipList, listMonitors, pickScreenshotFolder, screenshotDefaultFolder } from "@/ipc/commands";
+import type { AppInfo } from "@/ipc/generated/AppInfo";
+import { play } from "@/lib/sounds";
+import { fmtNumber } from "@/lib/format";
 import type { TileId } from "@/ipc/generated/TileId";
 import type { CapsuleStyle } from "@/ipc/generated/CapsuleStyle";
 import type { MonitorInfo } from "@/ipc/generated/MonitorInfo";
@@ -16,7 +19,7 @@ import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import { ALL_TILES } from "@/features/shortcuts/ShortcutsTab";
 import "./settings.css";
 
-type SectionId = "general" | "character" | "capsule" | "notifications" | "feed" | "shortcuts";
+type SectionId = "general" | "character" | "capsule" | "notifications" | "feed" | "sounds" | "shortcuts" | "privacy" | "about";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
@@ -24,10 +27,10 @@ const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: 
   { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: true },
   { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: true },
   { id: "feed", icon: "pocket", label: "settings.section.feed", ready: true },
-  { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: false },
+  { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: true },
   { id: "shortcuts", icon: "keyboard", label: "settings.section.shortcuts", ready: true },
-  { id: "privacy", icon: "shield", label: "settings.section.privacy", ready: false },
-  { id: "about", icon: "info", label: "settings.section.about", ready: false },
+  { id: "privacy", icon: "shield", label: "settings.section.privacy", ready: true },
+  { id: "about", icon: "info", label: "settings.section.about", ready: true },
 ];
 
 /** Live preview of the compact state: the capsule as it looks with the current settings. */
@@ -76,6 +79,14 @@ export function SettingsWindow() {
   const t = useT();
   const [section, setSection] = useState<SectionId>("general");
   const [shotDefault, setShotDefault] = useState<string | null>(null);
+  const [info, setInfo] = useState<AppInfo | null>(null);
+  const [clips, setClips] = useState(0);
+  const [done, setDone] = useState<string | null>(null);
+  useEffect(() => void appInfo().then(setInfo), []);
+  useEffect(() => {
+    if (section === "privacy") void clipList().then((l) => setClips(l.length));
+    setDone(null);
+  }, [section]);
   useEffect(() => void screenshotDefaultFolder().then(setShotDefault), []);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
 
@@ -218,9 +229,101 @@ export function SettingsWindow() {
                   onChange={(nuriActivity) => void updateSettings({ nuriActivity })}
                 />
               </Row>
+              <Row title={t("settings.talk")} sub={t("settings.talk.sub")}>
+                <Segmented
+                  label={t("settings.talk")}
+                  value={settings.talk}
+                  options={[
+                    { value: "silent", label: t("settings.talk.silent") },
+                    { value: "few", label: t("settings.talk.few") },
+                    { value: "chatty", label: t("settings.talk.chatty") },
+                  ]}
+                  onChange={(talk) => void updateSettings({ talk })}
+                />
+              </Row>
               <Row title={t("settings.reduceMotion")} sub={t("settings.reduceMotion.sub")}>
                 <Toggle label={t("settings.reduceMotion")} checked={settings.reduceMotion} onChange={(reduceMotion) => void updateSettings({ reduceMotion })} />
               </Row>
+              <Row title={t("settings.homeStatus")} sub={t("settings.homeStatus.sub")}>
+                <Toggle label={t("settings.homeStatus")} checked={settings.showHomeStatus} onChange={(showHomeStatus) => void updateSettings({ showHomeStatus })} />
+              </Row>
+            </section>
+          )}
+
+          {section === "sounds" && (
+            <section className="settings__content">
+              <Row title={t("settings.sounds")} sub={t("settings.sounds.sub")}>
+                <Toggle label={t("settings.sounds")} checked={!settings.soundsMuted} onChange={(on) => void updateSettings({ soundsMuted: !on })} />
+              </Row>
+              <Row title={t("settings.soundVolume")} sub={t("settings.soundVolume.sub")}>
+                <span className="row__buttons">
+                  <Slider
+                    label={t("settings.soundVolume")}
+                    value={Math.round(settings.soundVolume * 100)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    format={(v) => `${v}%`}
+                    onChange={(v) => void updateSettings({ soundVolume: v / 100 })}
+                  />
+                  <button type="button" className="icon-btn icon-btn--round" aria-label={t("settings.soundTry")} title={t("settings.soundTry")} onClick={() => play("done_success", { force: true })}>
+                    <Icon name="play" size={14} />
+                  </button>
+                </span>
+              </Row>
+              <Row title={t("settings.soundFeed")}>
+                <Toggle label={t("settings.soundFeed")} checked={settings.soundFeed} onChange={(soundFeed) => void updateSettings({ soundFeed })} />
+              </Row>
+              <Row title={t("settings.muteFullscreen")} sub={t("settings.muteFullscreen.sub")}>
+                <Toggle label={t("settings.muteFullscreen")} checked={settings.muteFullscreen} onChange={(muteFullscreen) => void updateSettings({ muteFullscreen })} />
+              </Row>
+            </section>
+          )}
+
+          {section === "privacy" && (
+            <section className="settings__content">
+              <div className="privacy-banner">
+                <Icon name="check" size={16} />
+                <span>{t("settings.privacy.banner")}</span>
+              </div>
+              <Row title={t("settings.clipboard")} sub={t("settings.privacy.clips").replace("{n}", fmtNumber(clips, settings.language))}>
+                <button type="button" className="btn-ghost btn-ghost--danger" onClick={() => void clipClear().then(() => (setClips(0), setDone("clips")))}>
+                  {done === "clips" ? t("settings.privacy.done") : t("settings.privacy.erase")}
+                </button>
+              </Row>
+              <Row title={t("settings.privacy.stats")} sub={t("settings.privacy.stats.sub")}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() =>
+                    void updateSettings({ games: { starCatch: 0, moonToss: 0, memoryMs: 0 }, firstRunMs: Date.now() }).then(() => setDone("stats"))
+                  }
+                >
+                  {done === "stats" ? t("settings.privacy.done") : t("settings.privacy.reset")}
+                </button>
+              </Row>
+              <Row title={t("settings.privacy.tour")} sub={t("settings.privacy.tour.sub")}>
+                <button type="button" className="btn-ghost" onClick={() => void updateSettings({ onboarded: false }).then(() => setDone("tour"))}>
+                  {done === "tour" ? t("settings.privacy.tour.started") : t("settings.privacy.tour.again")}
+                </button>
+              </Row>
+            </section>
+          )}
+
+          {section === "about" && (
+            <section className="settings__content about">
+              <img src={nimiIdle} alt="" className="about__nimi" draggable={false} />
+              <div className="about__name">NIMI</div>
+              <div className="about__ver">
+                {t("settings.about.version").replace("{v}", info?.version ?? "…")}
+                {info?.debug ? ` · ${t("settings.about.dev")}` : ""}
+              </div>
+              <p className="about__line">{t("settings.about.line")}</p>
+              <ul className="about__facts">
+                <li>{t("settings.about.local")}</li>
+                <li>{t("settings.about.os")}</li>
+                <li>{t("settings.about.credits").replace("{tauri}", info?.tauriVersion ?? "2")}</li>
+              </ul>
             </section>
           )}
 

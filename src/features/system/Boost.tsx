@@ -1,3 +1,4 @@
+import { play } from "@/lib/sounds";
 import { useEffect, useState } from "react";
 import nimiHappy from "@design/character/svg-small/nimi_happy_small.svg";
 import nimiIdle from "@design/character/svg-small/nimi_idle_small.svg";
@@ -77,6 +78,7 @@ export function BoostSheet({ onClose }: { onClose: () => void }) {
     setRunning(true);
     setMoodOverride("working");
     try {
+      play("boost");
       const r = await runBoost({
         temp: plan.temp,
         recycle: plan.recycle,

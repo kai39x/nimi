@@ -1,7 +1,7 @@
 {
   "name": "nimi",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "NIMI — a small desktop companion that lives at the top of your Windows screen",
   "type": "module",
   "scripts": {

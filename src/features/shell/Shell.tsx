@@ -25,6 +25,8 @@ import { levelOf, moodFor, onNotifyNew, useNotifications } from "@/features/noti
 import { TimerCapsule } from "@/features/shortcuts/TimerCapsule";
 import { TimerPill } from "@/features/shortcuts/TimerPill";
 import { onShellRequest } from "./actions";
+import { Tour } from "@/features/onboarding/Tour";
+import { play, preloadSounds } from "@/lib/sounds";
 import { CapsuleMenu, CapsulePill } from "./CapsuleMenu";
 import { CAPSULE_TOP, COMMAND_NIMI_SIZE, DEFAULT_NIMI_SIZE, FEED_NIMI_CENTER, FEED_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
 import { usePeek } from "./usePeek";
@@ -87,6 +89,15 @@ export function Shell() {
     sleepAfterMin: settings?.sleepAfterMin ?? 10,
     nimi: nimiRef,
   });
+
+  // Sounds (spec §11): load once; he yawns into sleep and wakes with a chime.
+  useEffect(() => preloadSounds(), []);
+  const lastMood = useRef(mood);
+  useEffect(() => {
+    if (mood === "sleeping" && lastMood.current !== "sleeping") play("nimi_sleep");
+    else if (lastMood.current === "sleeping" && mood !== "sleeping") play("nimi_wake");
+    lastMood.current = mood;
+  }, [mood]);
 
   // --- music -------------------------------------------------------------------------------
   const m = useMedia();
@@ -319,6 +330,13 @@ export function Shell() {
       onNotifyNew((n) => {
         if (settingsRef.current?.dnd) return;
         const level = levelOf(n);
+        play(
+          n.kind === "timerDone" || n.kind === "pomodoroBreak" || n.kind === "pomodoroWork" || n.kind === "pomodoroDone" || n.kind === "reminder"
+            ? "timer_done"
+            : level === "important"
+              ? "notify_important"
+              : "notify_soft",
+        );
         if (level === "calm") {
           setMoodOverride(moodFor(n), 2600);
           return;
@@ -388,7 +406,9 @@ export function Shell() {
 
   // «الكبسولة»: the compact look. The panel and the island are always glass with NIMI.
   const capsuleStyle: CapsuleStyle = settings?.capsuleStyle ?? "nimiInCapsule";
-  const noticeLook = !expanded && !feeding && !menuOpen && !!notice;
+  // First launch (board 17): the tour runs on the bare capsule until it is done or skipped.
+  const touring = !!settings && !settings.onboarded && mode === "compact" && !feeding;
+  const noticeLook = !expanded && !feeding && !menuOpen && !touring && !!notice;
   const nimiShown = expanded || feeding || noticeLook || capsuleStyle !== "capsuleOnly";
   const nimiMounted = useFadeMount(nimiShown, NIMI_FADE_MS);
   // A running timer takes the capsule over from the music look (board 13 note).
@@ -397,7 +417,7 @@ export function Shell() {
 
   // «يطل»: over a maximized window only a 12 px strip stays; it alone takes the mouse.
   // No «يطل» while a job runs behind the capsule (or its result waits): Kai wants to see it working.
-  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg || !!notice || pill?.kind === "toast" });
+  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg || !!notice || touring || pill?.kind === "toast" });
   useHitRect(ref, "shell", !peek);
   useHitRect(stripRef, "peek", peek);
 
@@ -501,6 +521,7 @@ export function Shell() {
           window.clearTimeout(pendingOpen.current);
           if (e.detail === 1) {
             moodClick();
+            play("nimi_hop");
             pendingOpen.current = window.setTimeout(() => show(musicRef.current ? "island" : "panel"), DOUBLE_CLICK_MS);
           } else if (e.detail === 2) {
             if (hasSong(m) && m.canPlayPause) {
@@ -549,6 +570,7 @@ export function Shell() {
             {pocketCount}
           </span>
         )}
+        {touring && <Tour nimi={() => ref.current?.querySelector(".shell__nimi .nimi")?.getBoundingClientRect() ?? null} />}
         {!expanded && !peek && menuOpen && (
           <CapsuleMenu onClose={closeMenu} pocketCount={pocketCount} onPocket={() => window.setTimeout(() => show("pocket"), 0)} />
         )}

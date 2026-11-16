@@ -323,8 +323,9 @@ function Donut({ drive }: { drive: DriveInfo }) {
 /** One line, only when something matters (spec §5): a nearly full drive, a busy CPU or RAM. */
 function Comment({ stats, onShow }: { stats: SystemStats | null; onShow: (drive: string) => void }) {
   const t = useT();
-  const lang = useSettings()?.language ?? "ar";
-  if (!stats) return null;
+  const settings = useSettings();
+  const lang = settings?.language ?? "ar";
+  if (!stats || settings?.talk === "silent") return null;
   const full = stats.drives.find((d) => d.state === "full");
   const cpuBusy = stats.cpu.usage >= 85;
   const ramBusy = stats.ram.usage >= 85;

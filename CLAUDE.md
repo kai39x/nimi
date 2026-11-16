@@ -17,6 +17,7 @@ Talk to Kai in Arabic (casual). Code, comments and commit messages in English.
 | Real OLE file drag for drop tests (STA) | `powershell -STA -File scripts/drag-file.ps1 -Path <file> -ToX <px> -ToY <px>` |
 
 Portable exe: `src-tauri/target/release/nimi.exe`. Installer: `src-tauri/target/release/bundle/nsis/`.
+Release: bump `version` in `package.json` and `src-tauri/tauri.conf.json`, then push a `v<version>` tag — `.github/workflows/release.yml` builds both and publishes a GitHub Release.
 Tauri downloads NSIS into `%LOCALAPPDATA%\tauri` on the first `tauri build` (user-scoped, no admin).
 
 ## Read first

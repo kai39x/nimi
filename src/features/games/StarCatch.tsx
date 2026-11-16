@@ -1,3 +1,4 @@
+import { play } from "@/lib/sounds";
 import { useEffect, useRef, useState } from "react";
 import { Nimi } from "@/features/character/Nimi";
 import type { Mood } from "@/features/character/rig/moods";
@@ -130,6 +131,7 @@ export function StarCatch({ paused, onScore, onLives, onOver, onTime }: GameProp
         } else {
           st.score += 10;
           onScore(st.score);
+          play("nuri_twinkle");
           st.pops.push({ x: o.x, y: top - 6, t: 0, text: "+10", bad: false });
           react("excited", 450);
         }

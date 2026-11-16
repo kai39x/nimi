@@ -1,3 +1,4 @@
+import { play, type SoundId } from "@/lib/sounds";
 import { useEffect, useSyncExternalStore } from "react";
 import { feedInfo, feedRun, feedUndo, focusOverlay, pocketAdd, setOverlayExpanded } from "@/ipc/commands";
 import { Events, onEvent } from "@/ipc/events";
@@ -68,8 +69,23 @@ function syncKeyboard() {
   }
 }
 
+const PHASE_SOUND: Partial<Record<Phase, SoundId>> = {
+  chomp: "nimi_chomp",
+  menu: "nimi_gulp",
+  working: "bubble_pop",
+  result: "done_success",
+  error: "error_soft",
+  pocketed: "pocket_in",
+};
+
 function set(patch: Partial<FeedState>) {
+  const before = state.phase;
   state = { ...state, ...patch };
+  if (patch.phase && patch.phase !== before) {
+    const sound = PHASE_SOUND[patch.phase];
+    // A job finishing behind the capsule still says so; the others are part of the show.
+    if (sound) play(sound);
+  }
   listeners.forEach((fn) => fn());
   syncKeyboard();
 }

@@ -243,3 +243,73 @@
   font-weight: 600;
   color: var(--n-muted);
 }
+
+/* «الخصوصية» banner (board 16) and «حول». */
+.privacy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: var(--n-s3);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(159, 240, 208, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(159, 240, 208, 0.25);
+  color: var(--n-text);
+  font-size: var(--n-fs-label);
+  line-height: 1.7;
+}
+
+.privacy-banner .icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--n-ok);
+}
+
+.btn-ghost--danger {
+  color: var(--n-danger);
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding-top: var(--n-s5);
+}
+
+.about__nimi {
+  width: 96px;
+  height: 96px;
+}
+
+.about__name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.about__ver {
+  font-size: var(--n-fs-label);
+  color: var(--n-muted);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.about__line {
+  max-width: 420px;
+  margin: var(--n-s3) 0;
+  font-size: var(--n-fs-body);
+  line-height: 1.8;
+}
+
+.about__facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+}
