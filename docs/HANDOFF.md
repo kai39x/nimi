@@ -1,9 +1,11 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-16)
-- All 11 phases done; version **1.0.0**, committed as `phase 10:`, **not pushed and no tag yet**.
-  Publishing = push `main`, then push the tag `v1.0.0` (the release workflow builds and publishes
-  the installer + portable exe). Ask Kai before either.
+- All 11 phases done. **v1.0.0 is published** (2026-11-16):
+  https://github.com/kai39x/nimi/releases/tag/v1.0.0 — `NIMI_1.0.0_x64-setup.exe` (NSIS, per-user)
+  and `NIMI_1.0.0_portable.exe`, built by `.github/workflows/release.yml` from the tag. The
+  workflow warns that `actions/checkout@v4` / `setup-node@v4` run on Node 20 (deprecated): bump
+  them to v5 on the next release. Next releases: bump the version, push a new `v*` tag.
 
 ## Phase 10 — sounds, settings, first launch, release (spec §9–12, boards 05, 16, 17)
 - `lib/sounds.ts`: the 14 WAVs (`design/sounds/`), volume `soundVolume` (40 %), one sound at a
