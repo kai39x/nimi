@@ -153,6 +153,22 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
   IOCTL on a 0-access volume handle.
 - A full scan of a 1 TB system drive (1.67 M files) takes ~38 s with directory-listing metadata only.
 
+### What phase 6 taught us (feeding and the pocket)
+
+- **File names are case-insensitive on Windows.** `feed/Feed.tsx` next to `feed/feed.ts` made
+  `@/features/feed/Feed` resolve to the store. Components that share a folder with a same-named
+  store get a distinct name (`FeedLayer.tsx`).
+- **Shell mode CSS loses to `.shell`** when its file is imported before `shell.css` (same
+  specificity, later wins). Mode rules in feature CSS use `.shell.shell--<mode>`.
+- OLE drag positions from `onDragDropEvent` are physical px; divide by `devicePixelRatio`.
+  NIMI's `.nimi` frame is ≈ 1.22 × his size (158 px at 130), so drop zones are measured from the
+  live frame rect, never from the size setting.
+- The drop zones stay generous: a drop anywhere within 2.1 × the body radius eats the file; only
+  Nuri's small circle sends it to the pocket.
+- Native, no new crates: WIC (convert / shrink / strip), Windows.Media.Ocr, `tar.exe` (bsdtar ships
+  with Windows 10+), `SHCreateDataObject` + `SHDoDragDrop` for drag-out (main thread),
+  `SHFileOperationW` for the Recycle Bin.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

@@ -20,14 +20,7 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager};
 use windows::{
     core::PCWSTR,
-    Win32::{
-        Storage::FileSystem::{MoveFileExW, MOVEFILE_COPY_ALLOWED, MOVEFILE_WRITE_THROUGH},
-        System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED},
-        UI::Shell::{
-            SHFileOperationW, FOF_ALLOWUNDO, FOF_NOCONFIRMATION, FOF_SILENT, FOF_WANTNUKEWARNING,
-            FO_DELETE, SHFILEOPSTRUCTW,
-        },
-    },
+    Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_COPY_ALLOWED, MOVEFILE_WRITE_THROUGH},
 };
 
 use super::{drives, now_ms, SystemShared};
@@ -349,25 +342,8 @@ pub fn recycle_files(app: &AppHandle, paths: &[String]) -> Result<FileActionResu
             dest: None,
         });
     }
-    // Double-NUL-terminated list.
-    let mut from: Vec<u16> = Vec::new();
-    for f in &files {
-        from.extend(f.path.encode_utf16());
-        from.push(0);
-    }
-    from.push(0);
-    // SAFETY: the shell operation runs on this (COM-initialised) thread with buffers that outlive it.
-    unsafe {
-        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-        let mut op = SHFILEOPSTRUCTW {
-            wFunc: FO_DELETE,
-            pFrom: PCWSTR(from.as_ptr()),
-            fFlags: (FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_WANTNUKEWARNING | FOF_SILENT).0
-                as u16,
-            ..Default::default()
-        };
-        let _ = SHFileOperationW(&mut op);
-    }
+    let paths_ok: Vec<String> = files.iter().map(|f| f.path.clone()).collect();
+    crate::files::shell::recycle(&paths_ok);
     // Whatever no longer exists went to the bin.
     let (mut done, mut failed, mut bytes) = (Vec::new(), Vec::new(), 0u64);
     for f in files {

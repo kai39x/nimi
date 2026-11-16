@@ -14,5 +14,9 @@ export const PANEL_NIMI_SIZE = 96;
 export const ISLAND_WIDTH = 736;
 export const ISLAND_HEIGHT = 160;
 export const ISLAND_NIMI_SIZE = 100;
+/** Feeding (board 08): NIMI grows so the mouth and Nuri make real drop targets. */
+export const FEED_NIMI_SIZE = 130;
+/** NIMI's body center inside the feeding layout (shell-local px). */
+export const FEED_NIMI_CENTER = { x: 270, y: 84 };
 /** The capsule while music plays: art · NIMI · equalizer · time (board 06/07 ①). */
 export const MUSIC_CAPSULE_WIDTH = 220;

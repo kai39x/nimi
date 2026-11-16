@@ -5,8 +5,10 @@
 //! `hotkeys`, `notifications`. All IPC payload types live in `ipc` so their TypeScript mirrors
 //! are generated from one place.
 
+mod files;
 mod ipc;
 mod media;
+mod pocket;
 mod settings;
 mod system;
 mod tray;
@@ -41,6 +43,7 @@ pub fn run() {
         .manage(Arc::new(window::OverlayState::default()))
         .manage(Arc::new(media::MediaShared::default()))
         .manage(Arc::new(system::SystemShared::default()))
+        .manage(Arc::new(files::FilesShared::default()))
         .invoke_handler(tauri::generate_handler![
             ipc::app_info,
             ipc::get_settings,
@@ -73,6 +76,16 @@ pub fn run() {
             ipc::boost_preview,
             ipc::run_boost,
             ipc::restore_power,
+            ipc::feed_info,
+            ipc::feed_run,
+            ipc::feed_undo,
+            ipc::open_folder,
+            ipc::pocket_list,
+            ipc::pocket_add,
+            ipc::pocket_remove,
+            ipc::pocket_copy,
+            ipc::pocket_run,
+            ipc::pocket_drag,
             ipc::dev_window_flags,
             ipc::dev_hittest_state,
         ])
@@ -103,6 +116,7 @@ pub fn run() {
             tray::setup(handle)?;
             media::spawn(handle);
             system::spawn(handle);
+            pocket::spawn(handle);
             if std::env::args().any(|arg| arg == "--settings") {
                 window::settings_window::open(handle)?;
             }

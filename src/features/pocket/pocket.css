@@ -1,0 +1,257 @@
+/* The pocket tray (design spec §7, board 09): the shell turns into a 780 px glass card with
+   NIMI on its top edge; cards in a grid, the footer drags the selection out or acts on it. */
+
+.shell.shell--pocket {
+  top: var(--panel-top);
+  width: 780px;
+  height: 330px;
+  border-radius: var(--n-r-panel);
+}
+
+.shell.shell--pocket:has(.pcard:nth-child(5)) {
+  height: 500px;
+}
+
+.shell.shell--pocket:has(.pocket__empty) {
+  height: 240px;
+}
+
+.shell.shell--pocket .shell__nimi {
+  top: 0;
+  margin-top: 8px;
+}
+
+.shell.shell--pocket.shell--winter::before {
+  left: 36%;
+  right: 36%;
+}
+
+.pocket {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--n-s3);
+  padding: 62px 20px 16px;
+  color: var(--n-text);
+  animation: pocket-in var(--n-dur-content) var(--n-ease-out) var(--n-delay-content) both;
+}
+
+@keyframes pocket-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.pocket__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pocket__head h3 {
+  margin: 0;
+  font-size: var(--n-fs-heading);
+  font-weight: 700;
+}
+
+.pocket__count {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--n-line);
+  color: var(--n-muted);
+  font-size: var(--n-fs-caption);
+}
+
+.pocket__all {
+  margin-inline-start: auto;
+}
+
+.pocket__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--n-muted);
+  font-size: var(--n-fs-label);
+}
+
+.pocket__empty strong {
+  color: var(--n-text);
+  font-size: var(--n-fs-body);
+}
+
+.pocket__cards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 136px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--n-r-card);
+  border: 1px solid var(--n-line);
+  background: var(--n-fill);
+  cursor: grab;
+  user-select: none;
+  transition:
+    border-color 160ms var(--n-ease-out),
+    background-color 160ms var(--n-ease-out);
+}
+
+.pcard:hover {
+  background: var(--n-fill-hover);
+}
+
+.pcard.is-on {
+  border-color: color-mix(in srgb, var(--n-butter) 60%, transparent);
+  background: color-mix(in srgb, var(--n-butter) 6%, var(--n-fill));
+}
+
+.pcard.is-missing {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pcard__check {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--n-line);
+  display: grid;
+  place-items: center;
+  color: transparent;
+}
+
+.pcard.is-on .pcard__check {
+  border-color: var(--n-butter);
+  background: var(--n-butter);
+  color: var(--n-ink);
+}
+
+.pcard__icon {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--n-ink);
+}
+
+.pcard__icon.tone-rose {
+  background: var(--n-rose);
+}
+
+.pcard__icon.tone-butter {
+  background: var(--n-butter);
+}
+
+.pcard__icon.tone-peri {
+  background: var(--n-peri);
+}
+
+.pcard__icon.tone-mint {
+  background: var(--n-ok);
+}
+
+.pcard__icon.tone-mist {
+  background: var(--n-mist);
+}
+
+.pcard__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--n-fs-label);
+  font-weight: 700;
+}
+
+.pcard__size,
+.pcard__from {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--n-muted);
+  font-size: var(--n-fs-caption);
+}
+
+.pcard__size {
+  font-variant-numeric: tabular-nums;
+}
+
+.pocket__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--n-line);
+}
+
+.pocket__drag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-end: auto;
+  color: var(--n-muted);
+  font-size: var(--n-fs-caption);
+  cursor: grab;
+  user-select: none;
+}
+
+.pocket__note {
+  color: var(--n-ok);
+  font-size: var(--n-fs-caption);
+  white-space: nowrap;
+}
+
+.pocket__foot .pill-btn {
+  height: 30px;
+  font-size: var(--n-fs-caption);
+}
+
+/* The count on the capsule when the pocket holds something. */
+.pocket-badge {
+  position: absolute;
+  top: calc(-7px * var(--nimi-scale));
+  inset-inline-start: calc(-7px * var(--nimi-scale));
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--n-butter);
+  color: var(--n-ink);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  animation: pill-in 200ms var(--n-ease-spring) both;
+}
+
+/* Satellites are clickable on the capsule: they open the tray. */
+.shell--capsule .shell__nimi .n-sat {
+  pointer-events: auto;
+  cursor: pointer;
+}

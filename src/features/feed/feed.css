@@ -1,0 +1,484 @@
+/* Feeding NIMI (design spec §6, board 08 option B).
+   While a file is dragged near him, or he is digesting one, the shell drops its glass and
+   becomes a 540 px-wide stage: NIMI (130 px) floats at the top, the drop zones ring his mouth
+   and Nuri, and the soap bubbles fan out under him. The shell box is also the hit rect, so its
+   height follows the phase to cover whatever is clickable. */
+
+.shell.shell--feed {
+  top: var(--capsule-top);
+  width: 540px;
+  height: 250px;
+  border-radius: 32px;
+}
+
+.shell.shell--feed-menu,
+.shell.shell--feed-working {
+  height: 432px;
+}
+
+.shell.shell--feed-menu:has(.feed-sheet) {
+  height: 584px;
+}
+
+.shell.shell--feed-result,
+.shell.shell--feed-error,
+.shell.shell--feed-pocketed {
+  height: 280px;
+}
+
+.shell.shell--feed-result:has(.feed-text) {
+  height: 470px;
+}
+
+.shell.shell--feed .shell__glass,
+.shell.shell--feed.shell--winter::before {
+  opacity: 0;
+}
+
+/* Body center sits at (--cx, --cy) = (270, 84); the 208-unit frame's center is 10 units higher. */
+.shell.shell--feed .shell__nimi {
+  top: 78px;
+  margin-top: 0;
+}
+
+.feed {
+  position: absolute;
+  inset: 0;
+  font-size: var(--n-fs-label);
+  color: var(--n-text);
+}
+
+/* --- drop zones (② «يفتح فمه») ---------------------------------------------------------------- */
+
+.feed-zone {
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--n-butter) 55%, transparent);
+  pointer-events: none;
+  animation: zone-in 220ms var(--n-ease-spring) both;
+  transition:
+    border-color 160ms var(--n-ease-out),
+    background-color 160ms var(--n-ease-out),
+    scale 220ms var(--n-ease-spring);
+}
+
+.feed-zone.is-hot {
+  border-color: var(--n-butter);
+  border-style: solid;
+  background: color-mix(in srgb, var(--n-butter) 10%, transparent);
+  scale: 1.06;
+}
+
+.feed-zone--mouth {
+  left: var(--cx);
+  top: var(--cy);
+  width: 140px;
+  height: 140px;
+}
+
+/* Nuri parks at rig (192, 74) for «hungry»; NIMI's frame is 158 px at size 130 (0.76 px per
+   rig unit), so (+88, −40) units from the body center → (+67, −30) px. */
+.feed-zone--pocket {
+  left: calc(var(--cx) + 67px);
+  top: calc(var(--cy) - 30px);
+  width: 58px;
+  height: 58px;
+  border-color: color-mix(in srgb, var(--n-text) 45%, transparent);
+}
+
+.feed-zone--pocket.is-hot {
+  border-color: var(--n-text);
+  background: color-mix(in srgb, var(--n-text) 10%, transparent);
+}
+
+.feed-zone--pocket span {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(10, 10, 20, 0.72);
+  font-size: var(--n-fs-caption);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@keyframes zone-in {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
+/* --- the file going in (③ «يبلعه») ------------------------------------------------------------ */
+
+.flying-file {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  width: 38px;
+  height: 46px;
+  translate: -50% -50%;
+  border-radius: 6px 14px 6px 6px;
+  background: linear-gradient(160deg, #fff, #e6e6f4);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: end center;
+  padding-bottom: 7px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.flying-file span {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--n-rose);
+  color: var(--n-ink);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.flying-file.is-gone {
+  left: var(--tx);
+  top: var(--ty);
+  scale: 0.15;
+  opacity: 0;
+  transition:
+    left 520ms var(--n-ease-in),
+    top 520ms var(--n-ease-in),
+    scale 560ms var(--n-ease-in),
+    opacity 200ms linear 380ms;
+}
+
+/* --- soap bubbles (⑤ «يسألك», option B) -------------------------------------------------------- */
+
+.bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  left: calc(var(--cx) + var(--bx));
+  top: calc(var(--cy) + var(--by));
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--n-text);
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: bubble-in 420ms var(--n-ease-spring) var(--delay) both;
+}
+
+.bubble__ball {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  /* Soap film: a dark core, a pastel rim and two specular dots (board 08 B). */
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.55) 0 3px, transparent 4px),
+    radial-gradient(circle at 72% 76%, rgba(255, 255, 255, 0.25) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 50%, rgba(18, 16, 34, 0.86) 58%, rgba(40, 34, 70, 0.7) 100%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(196, 200, 255, 0.55),
+    inset 0 0 12px rgba(242, 196, 222, 0.28),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+  transition:
+    scale 180ms var(--n-ease-spring),
+    box-shadow 180ms var(--n-ease-out);
+}
+
+.bubble:hover .bubble__ball,
+.bubble:focus-visible .bubble__ball {
+  scale: 1.08;
+  box-shadow:
+    inset 0 0 0 1.5px var(--n-butter),
+    inset 0 0 14px rgba(255, 228, 140, 0.25),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+.bubble:focus-visible {
+  outline: none;
+}
+
+.bubble__label {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(10, 10, 20, 0.6);
+  font-size: var(--n-fs-caption);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Chosen: the bubble bursts. */
+.bubble.is-pop .bubble__ball {
+  animation: bubble-pop 260ms var(--n-ease-out) both;
+}
+
+.bubbles.is-busy .bubble:not(.is-pop) {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.bubble:disabled {
+  cursor: default;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    left: var(--cx);
+    top: var(--cy);
+    scale: 0.3;
+  }
+}
+
+@keyframes bubble-pop {
+  60% {
+    scale: 1.3;
+    opacity: 0.6;
+  }
+  to {
+    scale: 1.5;
+    opacity: 0;
+  }
+}
+
+/* «IMG_2041.png · 3.1 MB» under the arc, then «المزيد». */
+.feed-pill {
+  position: absolute;
+  top: calc(var(--cy) + 250px);
+  left: 50%;
+  translate: -50% 0;
+  max-width: 380px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--n-line);
+  background: rgba(10, 10, 20, 0.72);
+  font-size: var(--n-fs-caption);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  animation: pill-in 220ms var(--n-ease-out) 200ms both;
+}
+
+.feed-more {
+  position: absolute;
+  top: calc(var(--cy) + 290px);
+  left: 50%;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(10, 10, 20, 0.72);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: pill-in 220ms var(--n-ease-out) 260ms both;
+}
+
+.feed-more:hover {
+  background: rgba(30, 30, 46, 0.86);
+}
+
+.feed-more svg {
+  transition: rotate 180ms var(--n-ease-out);
+}
+
+.feed-more svg.is-open {
+  rotate: 180deg;
+}
+
+.feed-sheet {
+  position: absolute;
+  top: calc(var(--cy) + 326px);
+  left: 50%;
+  translate: -50% 0;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: auto;
+  animation: pill-in 160ms var(--n-ease-spring) both;
+}
+
+.feed-sheet__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-label);
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.feed-sheet__item:hover,
+.feed-sheet__item:focus-visible {
+  background: var(--n-fill-hover);
+  outline: none;
+}
+
+/* --- result (⑥ «يرجّع لك النتيجة») ------------------------------------------------------------- */
+
+.out-file {
+  position: absolute;
+  left: calc(var(--cx) + 70px);
+  top: calc(var(--cy) + 30px);
+  width: 40px;
+  height: 50px;
+  border-radius: 6px 14px 6px 6px;
+  background: linear-gradient(160deg, #fff, #e6e6f4);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: end center;
+  padding-bottom: 8px;
+  pointer-events: none;
+  animation: out-pop 520ms var(--n-ease-spring) both;
+}
+
+.out-file span {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--n-butter);
+  color: var(--n-ink);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+@keyframes out-pop {
+  from {
+    left: var(--cx);
+    top: calc(var(--cy) + 6px);
+    scale: 0.2;
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+
+.feed-toast {
+  position: absolute;
+  top: calc(var(--cy) + 104px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+  padding: 8px 12px 8px 10px;
+  padding-inline: 10px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: auto;
+  animation: pill-in 240ms var(--n-ease-spring) both;
+}
+
+.feed-toast__ok {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--n-ok) 18%, transparent);
+  color: var(--n-ok);
+}
+
+.feed-toast__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-inline-end: 4px;
+  line-height: 1.35;
+}
+
+.feed-toast__text strong {
+  font-size: var(--n-fs-label);
+  font-weight: 700;
+}
+
+.feed-toast__text small {
+  font-size: var(--n-fs-caption);
+  color: var(--n-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-toast .pill-btn {
+  flex: none;
+  height: 30px;
+  font-size: var(--n-fs-caption);
+}
+
+.feed-toast--error {
+  border-radius: 22px;
+  padding-inline-start: 18px;
+}
+
+.feed-toast--error strong {
+  color: var(--n-danger);
+}
+
+/* OCR text / archive listing under the toast. */
+.feed-text {
+  position: absolute;
+  top: calc(var(--cy) + 170px);
+  left: 50%;
+  translate: -50% 0;
+  width: 440px;
+  max-height: 200px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  overflow: auto;
+  font: inherit;
+  font-size: var(--n-fs-caption);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: auto;
+  user-select: text;
+  animation: pill-in 240ms var(--n-ease-out) 80ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .feed-zone,
+  .out-file,
+  .feed-toast,
+  .feed-pill,
+  .feed-more {
+    animation-duration: 1ms;
+  }
+}

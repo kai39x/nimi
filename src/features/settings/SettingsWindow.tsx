@@ -10,19 +10,18 @@ import type { MonitorInfo } from "@/ipc/generated/MonitorInfo";
 import type { Settings } from "@/ipc/generated/Settings";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { isWinter, nuriPace } from "@/lib/winter";
-import { DropDiagnostics } from "@/features/overlay/DropDiagnostics";
 import { Nimi } from "@/features/character/Nimi";
 import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import "./settings.css";
 
-type SectionId = "general" | "character" | "capsule";
+type SectionId = "general" | "character" | "capsule" | "feed";
 
 const SECTIONS: ReadonlyArray<{ id: string; icon: IconName; label: TKey; ready: boolean }> = [
   { id: "general", icon: "gear", label: "settings.section.general", ready: true },
   { id: "character", icon: "star4", label: "settings.section.character", ready: true },
   { id: "capsule", icon: "capsule", label: "settings.section.capsule", ready: true },
   { id: "notifications", icon: "bell", label: "settings.section.notifications", ready: false },
-  { id: "feed", icon: "pocket", label: "settings.section.feed", ready: false },
+  { id: "feed", icon: "pocket", label: "settings.section.feed", ready: true },
   { id: "sounds", icon: "speaker", label: "settings.section.sounds", ready: false },
   { id: "shortcuts", icon: "keyboard", label: "settings.section.shortcuts", ready: false },
   { id: "privacy", icon: "shield", label: "settings.section.privacy", ready: false },
@@ -241,9 +240,40 @@ export function SettingsWindow() {
               </Row>
             </section>
           )}
+
+          {section === "feed" && (
+            <section className="settings__content">
+              <Row title={t("settings.results")} sub={t("settings.results.sub")}>
+                <Segmented
+                  label={t("settings.results")}
+                  value={settings.resultsLocation}
+                  options={[
+                    { value: "nextToOriginal", label: t("settings.results.next") },
+                    { value: "downloads", label: t("settings.results.downloads") },
+                    { value: "ask", label: t("settings.results.ask") },
+                  ]}
+                  onChange={(resultsLocation) => void updateSettings({ resultsLocation })}
+                />
+              </Row>
+              <Row title={t("settings.pocketEmpty")} sub={t("settings.pocketEmpty.sub")}>
+                <Segmented
+                  label={t("settings.pocketEmpty")}
+                  value={settings.pocketEmpty}
+                  options={[
+                    { value: "day", label: t("settings.pocketEmpty.day") },
+                    { value: "week", label: t("settings.pocketEmpty.week") },
+                    { value: "never", label: t("settings.never") },
+                  ]}
+                  onChange={(pocketEmpty) => void updateSettings({ pocketEmpty })}
+                />
+              </Row>
+              <Row title={t("settings.deleteTo")} sub={t("settings.deleteTo.sub")}>
+                <Toggle label={t("settings.deleteTo")} checked disabled onChange={() => {}} />
+              </Row>
+            </section>
+          )}
         </main>
       </div>
-      {import.meta.env.DEV && <DropDiagnostics />}
     </div>
   );
 }

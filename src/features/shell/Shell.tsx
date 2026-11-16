@@ -13,9 +13,12 @@ import { setAmbientMood, useNimiMood } from "@/features/character/useNimiMood";
 import { hasSong, media, useMedia, useMusicActive, useVolume } from "@/features/music/media";
 import { MusicCapsule, MusicIsland, useRememberPlayer } from "@/features/music/Music";
 import { Panel } from "@/features/panel/Panel";
+import { dismiss as dismissFeed, setFeedEnabled, useFeed, useFeedDrops } from "@/features/feed/feed";
+import { FeedLayer, useFeedZones } from "@/features/feed/FeedLayer";
+import { PocketTray, usePocket } from "@/features/pocket/Pocket";
 import type { TabId } from "@/features/panel/TabBar";
 import { CapsuleMenu, CapsulePill } from "./CapsuleMenu";
-import { CAPSULE_TOP, DEFAULT_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
+import { CAPSULE_TOP, DEFAULT_NIMI_SIZE, FEED_NIMI_CENTER, FEED_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
 import { usePeek } from "./usePeek";
 import "./shell.css";
 
@@ -30,7 +33,7 @@ const VOLUME_SHOW_MS = 1200;
 /** Volume step per wheel notch (deltaY 100). */
 const WHEEL_STEP = 0.02;
 
-type Mode = "compact" | "island" | "panel";
+type Mode = "compact" | "island" | "panel" | "pocket";
 type Pill = { kind: "song" | "volume" | "toast"; text: string; icon?: "play" | "pause" } | null;
 
 /** Stays true for `ms` after `shown` turns false, so the element can fade before unmounting. */
@@ -84,6 +87,18 @@ export function Shell() {
   const musicRef = useRef(musicActive);
   musicRef.current = musicActive;
 
+  // --- feeding (board 08) and the pocket (board 09) -------------------------------------------
+  useFeedDrops();
+  const feed = useFeed();
+  const feeding = feed.phase !== "idle";
+  const pocket = usePocket();
+  const pocketCount = pocket.filter((p) => !p.missing).length;
+  useEffect(() => setFeedEnabled(mode === "compact"), [mode]);
+  useFeedZones(
+    useCallback(() => ref.current?.querySelector(".shell__nimi .nimi")?.getBoundingClientRect() ?? null, []),
+    true,
+  );
+
   // The hit rect must follow the morph frame by frame.
   const morphing = useRef(0);
   const trackMorph = useCallback(() => {
@@ -115,6 +130,7 @@ export function Shell() {
     void setOverlayExpanded(false);
   }, []);
 
+  const feedRef = useRef(false);
   const pendingOpen = useRef(0);
   useEffect(() => () => window.clearTimeout(pendingOpen.current), []);
 
@@ -122,11 +138,14 @@ export function Shell() {
     () =>
       onEvent(Events.overlayClickOutside, () => {
         if (menuOpen) closeMenu();
+        else if (feedRef.current) dismissFeed();
         else close();
       }),
     [close, closeMenu, menuOpen],
   );
   useEffect(() => onEvent(Events.trayOpen, openPanel), [openPanel]);
+
+  feedRef.current = feeding;
 
   useEffect(() => {
     if (!expanded) return;
@@ -138,7 +157,8 @@ export function Shell() {
   }, [expanded, close]);
 
   // The song ending while the island is open: it shows the empty state; the panel stays.
-  const nimiSize = mode === "panel" ? PANEL_NIMI_SIZE : mode === "island" ? ISLAND_NIMI_SIZE : size;
+  const nimiSize =
+    mode === "panel" || mode === "pocket" ? PANEL_NIMI_SIZE : mode === "island" ? ISLAND_NIMI_SIZE : feeding ? FEED_NIMI_SIZE : size;
 
   // --- pills: song name on hover, volume on wheel / external change, play/pause toast ----------
   const [pill, setPill] = useState<Pill>(null);
@@ -185,17 +205,17 @@ export function Shell() {
 
   // «الكبسولة»: the compact look. The panel and the island are always glass with NIMI.
   const capsuleStyle: CapsuleStyle = settings?.capsuleStyle ?? "nimiInCapsule";
-  const nimiShown = expanded || capsuleStyle !== "capsuleOnly";
+  const nimiShown = expanded || feeding || capsuleStyle !== "capsuleOnly";
   const nimiMounted = useFadeMount(nimiShown, NIMI_FADE_MS);
-  const musicLook = !expanded && musicActive && capsuleStyle !== "nimiOnly";
+  const musicLook = !expanded && !feeding && musicActive && capsuleStyle !== "nimiOnly";
 
   // «يطل»: over a maximized window only a 12 px strip stays; it alone takes the mouse.
-  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen });
+  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding });
   useHitRect(ref, "shell", !peek);
   useHitRect(stripRef, "peek", peek);
 
   // The hit rect follows the shell box, which changes shape with the style, music and peek.
-  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, trackMorph]);
+  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, feed.phase, trackMorph]);
 
   const vars = {
     "--nimi-scale": scale,
@@ -215,7 +235,15 @@ export function Shell() {
         ref={ref}
         className={[
           "shell",
-          mode === "panel" ? "shell--panel" : mode === "island" ? "shell--island" : `shell--capsule shell--${capsuleStyle}`,
+          mode === "panel"
+            ? "shell--panel"
+            : mode === "island"
+              ? "shell--island"
+              : mode === "pocket"
+                ? "shell--pocket"
+                : feeding
+                  ? `shell--feed shell--feed-${feed.phase}`
+                  : `shell--capsule shell--${capsuleStyle}`,
           musicLook && "shell--music",
           peek && "shell--peek",
           winter && "shell--winter",
@@ -226,7 +254,7 @@ export function Shell() {
         role={expanded ? "dialog" : "button"}
         aria-label={t("app.name")}
         aria-expanded={expanded}
-        onPointerDown={expanded ? undefined : drag.onPointerDown}
+        onPointerDown={expanded || feeding ? undefined : drag.onPointerDown}
         onPointerEnter={(e) => {
           onPointerEnter(e);
           window.clearTimeout(hoverTimer.current);
@@ -245,16 +273,22 @@ export function Shell() {
         onWheel={onWheel}
         onContextMenu={(e) => {
           e.preventDefault();
-          if (expanded) return;
+          if (expanded || feeding) return;
           window.clearTimeout(pendingOpen.current);
           setPill(null);
           setMenuOpen(true);
           void setOverlayExpanded(true);
         }}
         onClick={(e) => {
-          if (expanded || drag.wasDragged()) return;
+          if (expanded || feeding || drag.wasDragged()) return;
           if (menuOpen) {
             closeMenu();
+            return;
+          }
+          // A pocket satellite (or the pocket badge) opens the pocket tray (spec §7).
+          if ((e.target as Element).closest(".n-sat, .pocket-badge")) {
+            window.clearTimeout(pendingOpen.current);
+            show("pocket");
             return;
           }
           // Wait out the double-click interval before morphing: once the island or panel opens, a
@@ -284,6 +318,8 @@ export function Shell() {
               size={nimiSize}
               winter={winter}
               volume={meter && !expanded ? (volume.muted ? 0 : volume.level) : null}
+              satellites={Math.min(pocketCount, 8)}
+              belly={feed.phase === "chew"}
               reducedMotion={settings?.reduceMotion ?? false}
               nuriPace={nuriPace(settings?.nuriActivity)}
             />
@@ -297,6 +333,14 @@ export function Shell() {
           }}
         />
         <Panel open={mode === "panel"} mood={mood} tab={tab} onTab={setTab} onCollapse={close} />
+        <PocketTray open={mode === "pocket"} onClose={close} />
+        {feeding && mode === "compact" && <FeedLayer nimiCenter={FEED_NIMI_CENTER} />}
+        {!expanded && !feeding && !peek && pocketCount > 0 && (
+          <span className="pocket-badge" title={t("pocket.title")}>
+            <Icon name="pocket" size={12} />
+            {pocketCount}
+          </span>
+        )}
         {!expanded && !peek && menuOpen && <CapsuleMenu onClose={closeMenu} />}
         {!expanded && !peek && !menuOpen && pill && (
           <CapsulePill key={pill.kind} tone={pill.kind === "volume" ? "butter" : undefined}>

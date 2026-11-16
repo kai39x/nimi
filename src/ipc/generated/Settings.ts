@@ -2,6 +2,8 @@
 import type { CapsuleStyle } from "./CapsuleStyle";
 import type { Language } from "./Language";
 import type { NuriActivity } from "./NuriActivity";
+import type { PocketEmpty } from "./PocketEmpty";
+import type { ResultsLocation } from "./ResultsLocation";
 import type { WinterMode } from "./WinterMode";
 
 /**
@@ -37,6 +39,14 @@ capsuleStyle: CapsuleStyle,
  * «يطل»: over a maximized window the capsule slides up and only a 12 px strip stays.
  */
 peekOverMaximized: boolean, 
+/**
+ * «وين تروح النتيجة»: where feeding results are saved.
+ */
+resultsLocation: ResultsLocation, 
+/**
+ * «الجيب يفضى»: when the pocket empties itself.
+ */
+pocketEmpty: PocketEmpty, 
 /**
  * Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
  */

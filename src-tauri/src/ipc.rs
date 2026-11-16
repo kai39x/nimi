@@ -11,7 +11,9 @@ use tauri::{AppHandle, Manager, State};
 use ts_rs::TS;
 
 use crate::{
+    files::{self, FilesShared},
     media::{self, MediaShared},
+    pocket,
     settings::SettingsStore,
     system::{self, SystemShared},
     window::{self, OverlayState},
@@ -32,6 +34,7 @@ pub mod events {
     pub const MEDIA_VOLUME: &str = "nimi://media/volume";
     pub const SYSTEM_STATS: &str = "nimi://system/stats";
     pub const SYSTEM_SCAN: &str = "nimi://system/scan";
+    pub const POCKET_CHANGED: &str = "nimi://pocket/changed";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -93,6 +96,10 @@ pub struct Settings {
     pub capsule_style: CapsuleStyle,
     /// «يطل»: over a maximized window the capsule slides up and only a 12 px strip stays.
     pub peek_over_maximized: bool,
+    /// «وين تروح النتيجة»: where feeding results are saved.
+    pub results_location: ResultsLocation,
+    /// «الجيب يفضى»: when the pocket empties itself.
+    pub pocket_empty: PocketEmpty,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
     #[ts(type = "number")]
     pub first_run_ms: u64,
@@ -114,6 +121,8 @@ impl Default for Settings {
             nuri_activity: NuriActivity::Normal,
             capsule_style: CapsuleStyle::NimiInCapsule,
             peek_over_maximized: true,
+            results_location: ResultsLocation::NextToOriginal,
+            pocket_empty: PocketEmpty::Day,
             first_run_ms: 0,
         }
     }
@@ -139,6 +148,28 @@ pub enum NuriActivity {
     #[default]
     Normal,
     Active,
+}
+
+/// Where a feeding result (ZIP, converted image…) is saved (spec §6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ResultsLocation {
+    #[default]
+    NextToOriginal,
+    Downloads,
+    Ask,
+}
+
+/// The pocket empties itself after a day, a week, or never (spec §7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum PocketEmpty {
+    #[default]
+    Day,
+    Week,
+    Never,
 }
 
 /// «الكبسولة»: how the compact state looks. The panel is always glass with NIMI on top.
@@ -753,6 +784,175 @@ pub async fn run_boost(app: AppHandle, plan: BoostPlan) -> Result<BoostResult, S
 #[tauri::command]
 pub fn restore_power() -> Result<(), String> {
     system::boost::restore_power().map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------------------------
+// Feeding & pocket (phase 6, design spec §6–7, boards 08–09)
+
+/// What NIMI just ate — picks the bubbles and the «المزيد» actions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MealKind {
+    Image,
+    Archive,
+    Folder,
+    Pdf,
+    Text,
+    Other,
+    /// More than one item.
+    Many,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Meal {
+    pub kind: MealKind,
+    pub paths: Vec<String>,
+    /// First item's name (the pill under the bubbles).
+    pub name: String,
+    #[ts(type = "number")]
+    pub bytes: u64,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FeedAction {
+    Copy,
+    Cut,
+    CopyPath,
+    Zip,
+    Move,
+    ToPng,
+    ToJpg,
+    Shrink,
+    OcrText,
+    StripMeta,
+    ExtractHere,
+    ExtractTo,
+    ListArchive,
+    FolderSize,
+    Terminal,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FeedResult {
+    pub action: FeedAction,
+    /// Files created or moved by the action (the one that «pops out of his mouth»).
+    pub outputs: Vec<String>,
+    #[ts(type = "number")]
+    pub bytes: u64,
+    /// Folder to open with «افتح المجلد».
+    pub folder: Option<String>,
+    /// Text to show (OCR result, archive listing, folder size line).
+    pub text: Option<String>,
+    /// Pass to `feed_undo` for «تراجع»; None when there is nothing to undo.
+    pub undo: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PocketItem {
+    pub id: String,
+    pub path: String,
+    pub name: String,
+    #[ts(type = "number")]
+    pub size: u64,
+    pub is_dir: bool,
+    /// Name of the folder it came from («التنزيلات»).
+    pub folder: String,
+    #[ts(type = "number")]
+    pub added_ms: i64,
+    /// The file was moved or deleted since; shown with a mark, then dropped.
+    pub missing: bool,
+}
+
+#[tauri::command]
+pub fn feed_info(paths: Vec<String>) -> Result<Meal, String> {
+    files::meal(&paths)
+}
+
+#[tauri::command]
+pub async fn feed_run(
+    app: AppHandle,
+    action: FeedAction,
+    paths: Vec<String>,
+) -> Result<FeedResult, String> {
+    tauri::async_runtime::spawn_blocking(move || files::run(&app, action, &paths))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// «تراجع»: created files go to the Recycle Bin, moved files go back.
+#[tauri::command]
+pub async fn feed_undo(app: AppHandle, token: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || files::undo(&app, &token))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// «افتح المجلد»: Explorer with the file selected.
+#[tauri::command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    files::shell::reveal(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn pocket_list(app: AppHandle) -> Vec<PocketItem> {
+    pocket::list(&app)
+}
+
+#[tauri::command]
+pub fn pocket_add(app: AppHandle, paths: Vec<String>) -> Vec<PocketItem> {
+    pocket::add(&app, &paths)
+}
+
+#[tauri::command]
+pub fn pocket_remove(app: AppHandle, ids: Vec<String>) -> Vec<PocketItem> {
+    pocket::remove(&app, &ids)
+}
+
+/// Copies the selected pocket files to the clipboard (paste them anywhere).
+#[tauri::command]
+pub fn pocket_copy(app: AppHandle, ids: Vec<String>) -> Result<(), String> {
+    files::shell::copy_files(&pocket::paths(&app, &ids), false).map_err(|e| e.to_string())
+}
+
+/// ZIP / move of pocket files, same results and undo as feeding.
+#[tauri::command]
+pub async fn pocket_run(
+    app: AppHandle,
+    action: FeedAction,
+    ids: Vec<String>,
+) -> Result<FeedResult, String> {
+    let paths = pocket::paths(&app, &ids);
+    let result = tauri::async_runtime::spawn_blocking({
+        let app = app.clone();
+        move || files::run(&app, action, &paths)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    if action == FeedAction::Move {
+        pocket::refresh(&app);
+    }
+    Ok(result)
+}
+
+/// Starts a real OS drag of the selected pocket files (drop them in Explorer, mail, any app).
+#[tauri::command]
+pub fn pocket_drag(
+    app: AppHandle,
+    files: State<'_, Arc<FilesShared>>,
+    ids: Vec<String>,
+) -> Result<(), String> {
+    let paths = pocket::paths(&app, &ids);
+    files::shell::drag_out(&app, files.inner().clone(), paths)
 }
 
 // ---------------------------------------------------------------------------------------------

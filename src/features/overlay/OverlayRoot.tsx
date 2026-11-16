@@ -7,7 +7,6 @@ import { isWinter } from "@/lib/winter";
 import { setNimiPaused } from "@/features/character/engine";
 import { Shell } from "@/features/shell/Shell";
 import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
-import { DropDiagnostics } from "./DropDiagnostics";
 import { Snow } from "./Snow";
 import "./overlay.css";
 
@@ -33,7 +32,6 @@ export function OverlayRoot() {
     <div className={"overlay" + (visibility.visible ? "" : " overlay--hidden")}>
       {snowing && <Snow width={340 * scale} height={190 * scale} />}
       <Shell />
-      {import.meta.env.DEV && <DropDiagnostics />}
     </div>
   );
 }

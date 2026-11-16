@@ -102,6 +102,24 @@ pub fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Runs `f` with the overlay brought to the foreground (so a dialog it owns opens in front, not
+/// as a flashing taskbar button), then gives the foreground back if the overlay did not have it.
+/// Call from a worker thread; `f` gets the overlay's HWND as an isize.
+pub fn with_foreground<T>(app: &AppHandle, f: impl FnOnce(isize) -> T) -> T {
+    let st = state(app);
+    let ours = st.hwnd.load(Ordering::Relaxed);
+    let had = foreground::current() == ours;
+    if !had {
+        let _ = set_overlay_focus(app, true);
+        std::thread::sleep(std::time::Duration::from_millis(60));
+    }
+    let out = f(ours);
+    if !had && !st.expanded.load(Ordering::Relaxed) {
+        let _ = set_overlay_focus(app, false);
+    }
+    out
+}
+
 /// WebView2 marks the page focused when the overlay's webview is created, and since the overlay
 /// is never activated it never gets the blur — Chromium then never throttles it (≈3× idle CPU)
 /// until the panel is opened and closed once. A freshly launched process may also keep the

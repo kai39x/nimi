@@ -3,13 +3,17 @@ import type { AppInfo } from "./generated/AppInfo";
 import type { BoostPlan } from "./generated/BoostPlan";
 import type { BoostPreview } from "./generated/BoostPreview";
 import type { BoostResult } from "./generated/BoostResult";
+import type { FeedAction } from "./generated/FeedAction";
+import type { FeedResult } from "./generated/FeedResult";
 import type { FileActionResult } from "./generated/FileActionResult";
 import type { HitRect } from "./generated/HitRect";
+import type { Meal } from "./generated/Meal";
 import type { MediaArt } from "./generated/MediaArt";
 import type { MediaCommand } from "./generated/MediaCommand";
 import type { MediaState } from "./generated/MediaState";
 import type { MonitorInfo } from "./generated/MonitorInfo";
 import type { OverlayVisibility } from "./generated/OverlayVisibility";
+import type { PocketItem } from "./generated/PocketItem";
 import type { ScanProgress } from "./generated/ScanProgress";
 import type { ScanResult } from "./generated/ScanResult";
 import type { Settings } from "./generated/Settings";
@@ -64,4 +68,16 @@ export const recycleFiles = (paths: string[]) => invoke<FileActionResult>("recyc
 export const boostPreview = () => invoke<BoostPreview>("boost_preview");
 export const runBoost = (plan: BoostPlan) => invoke<BoostResult>("run_boost", { plan });
 export const restorePower = () => invoke<void>("restore_power");
+
+// Feeding & pocket (phase 6)
+export const feedInfo = (paths: string[]) => invoke<Meal>("feed_info", { paths });
+export const feedRun = (action: FeedAction, paths: string[]) => invoke<FeedResult>("feed_run", { action, paths });
+export const feedUndo = (token: string) => invoke<void>("feed_undo", { token });
+export const openFolder = (path: string) => invoke<void>("open_folder", { path });
+export const pocketList = () => invoke<PocketItem[]>("pocket_list");
+export const pocketAdd = (paths: string[]) => invoke<PocketItem[]>("pocket_add", { paths });
+export const pocketRemove = (ids: string[]) => invoke<PocketItem[]>("pocket_remove", { ids });
+export const pocketCopy = (ids: string[]) => invoke<void>("pocket_copy", { ids });
+export const pocketRun = (action: FeedAction, ids: string[]) => invoke<FeedResult>("pocket_run", { action, ids });
+export const pocketDrag = (ids: string[]) => invoke<void>("pocket_drag", { ids });
 
