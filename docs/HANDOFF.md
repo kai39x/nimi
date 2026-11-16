@@ -2,8 +2,9 @@
 
 ## Where we are (2026-11-16)
 - Phases 0–5 done and pushed (`4326dd4` phase 5, Kai confirmed it works; Recycle Bin stays
-  pre-ticked in Boost). **Phase 6 (Feed & Pocket) built and committed as `phase 6:`, waiting for
-  Kai's OK.** Next after the OK: phase 7.
+  pre-ticked in Boost). **Phase 6 (Feed & Pocket) committed as `phase 6:` (`23738cb`, not pushed).
+  Kai tested it and left 5 notes — do "Kai's notes on phase 6" below first, show him, get his OK,
+  then phase 7.**
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
@@ -11,6 +12,44 @@
   change. `engine.ts` = the lab's spring engine on HTML compositor layers; it also drives Nuri's
   glow and roll (no idle CSS animations — see PLAN "What phase 5 taught us").
 - Peek «يطل»: `fullscreen.rs` reports `covered`, the hit-test loop `reveal`, `usePeek.ts` decides.
+
+## Kai's notes on phase 6 (2026-11-16) — do these next, in this order
+Kai allows downloading any crate / npm library these need (no need to ask again).
+
+1. **Pocket badge invisible in «نيمي بس»**, worse at bigger NIMI sizes, so the pocket can't be
+   opened. The badge sits at the shell's top corner (`.pocket-badge`, `Shell.tsx`), which in
+   «نيمي بس» is NIMI's own small circle and is hidden while peeking. Give it a place that stays
+   visible and clickable in every capsule style and size (inside the hit rect), and check the
+   satellites are clickable there too. Screenshot all three styles at 48 / 64 / 96.
+2. **More conversions, as a second round of bubbles.** «تحويل» opens a new bubble arc of the target
+   formats the meal can become (e.g. JPG → PNG / WebP / PDF / ICO / BMP; PNG → JPG / WebP / PDF;
+   PDF → DOCX / TXT / images; DOCX → PDF / TXT …), with a back bubble. Plan the matrix per kind and
+   say which need which crate. Notes: WebP encode needs a crate (`image` with webp, or `webp`);
+   image → PDF via `printpdf` / `lopdf`; PDF → TXT via `pdf-extract` / `lopdf`; PDF → DOCX is text-only
+   (layout lost) via `docx-rs` — tell Kai that honestly; DOCX → PDF has no offline Windows API without
+   Word (check for Word COM, else skip).
+3. **OCR: add a «نسخ النص» button** on the result (it copies automatically today, but he wants the
+   button; show «نسخت» feedback).
+4. **The "working" look must stay until the job ends.** Zipping a 6 GB MP4 showed NIMI working,
+   but once Kai clicked back into his work NIMI went up / back to normal and it no longer looked
+   busy. Cause: `overlayClickOutside` → `dismissFeed()` runs even while `phase === "working"`
+   (`feed.ts` `dismiss()` doesn't check `busy()`), which clears the mood while the job keeps
+   running in Rust. Fix: while working, a click outside collapses the stage back to the capsule
+   but keeps the `working` mood (and peek shows it too); when the job ends, show the result toast
+   (or a small pill) under the capsule. Consider a progress % for big ZIP / extract.
+5. **Build what phase 6 left out:** PDF merge / extract pages / compress (`lopdf`), WebP output,
+   **text and link drops** (the webview's file-drop handler only gives paths — needs a custom OLE
+   drop target or `IDropTarget` on the overlay to receive CF_UNICODETEXT / URLs; check Tauri
+   `dragDropEnabled` options first), link actions (open, copy, desktop shortcut, **safety check**),
+   text actions (save as note, copy plain, word count). **Skip batch rename** (Kai doesn't need it).
+   - Link safety: Kai suggested OpenPhish "or whatever is better". NIMI is offline-only (CLAUDE.md),
+     so: offline heuristics always (IP host, punycode / look-alike letters, `@` in URL, many
+     subdomains, http, suspicious TLDs, URL shorteners) + OpenPhish's free community feed
+     downloaded at most daily **only if Kai turns it on** (setting, off by default) and checked
+     locally — the URL itself never leaves the PC. Confirm this with Kai before shipping.
+
+Then test everything with real drags on NIMI's own test files, show Kai, wait for his OK, commit
+(`phase 6:` follow-up, e.g. `phase 6.1:`), and start **phase 7**.
 
 ## Phase 6 — feed & pocket (spec §6–7, boards 08 option B and 09)
 - Rust `files/`: `mod.rs` (meal info, every action, undo tokens: recycle the outputs or move
