@@ -147,6 +147,52 @@ pub fn reveal(path: &str) -> std::io::Result<()> {
         .map(|_| ())
 }
 
+/// The default browser on an http(s) link (callers check the scheme with `link::parse`).
+pub fn open_url(url: &str) -> windows::core::Result<()> {
+    use windows::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
+    // SAFETY: ShellExecute with an http(s) URL; >32 means success.
+    let r = unsafe {
+        ShellExecuteW(
+            None,
+            &HSTRING::from("open"),
+            &HSTRING::from(url),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    if r.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(windows::core::Error::from_thread())
+    }
+}
+
+/// The user's Desktop folder (may live in OneDrive).
+pub fn desktop() -> Option<PathBuf> {
+    use windows::Win32::{
+        System::Com::CoTaskMemFree,
+        UI::Shell::{FOLDERID_Desktop, SHGetKnownFolderPath, KF_FLAG_DEFAULT},
+    };
+    // SAFETY: known-folder lookup; the returned string is freed with CoTaskMemFree.
+    unsafe {
+        let p = SHGetKnownFolderPath(&FOLDERID_Desktop, KF_FLAG_DEFAULT, None).ok()?;
+        let path = p.to_string().ok().map(PathBuf::from);
+        CoTaskMemFree(Some(p.0 as *const c_void));
+        path
+    }
+}
+
+/// «2026-11-16 04-12» in local time, for file names.
+pub fn local_stamp() -> String {
+    // SAFETY: fills a plain struct.
+    let t = unsafe { windows::Win32::System::SystemInformation::GetLocalTime() };
+    format!(
+        "{:04}-{:02}-{:02} {:02}-{:02}",
+        t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute
+    )
+}
+
 /// Windows Terminal in `dir` when installed, else a Command Prompt there.
 pub fn terminal(dir: &Path) -> std::io::Result<()> {
     let wt = std::env::var("LOCALAPPDATA")

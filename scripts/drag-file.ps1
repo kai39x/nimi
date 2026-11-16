@@ -3,7 +3,9 @@
   Performs a real OLE file drag (CF_HDROP) from a start point to an end point, like dragging a
   file out of Explorer. Used to test NIMI's drop target without a human at the mouse.
   Must run in an STA thread:  powershell -STA -File scripts/drag-file.ps1 ...
-.PARAMETER Path   File to drag.
+.PARAMETER Path   File to drag (or use -Text / -Url instead).
+.PARAMETER Text   Drag plain text instead of a file (like a selection from an editor).
+.PARAMETER Url    Drag a link the way browsers do (UniformResourceLocatorW + text).
 .PARAMETER ToX/ToY  Drop point in physical screen pixels.
 .PARAMETER FromX/FromY  Start point (defaults to 300 px left / 200 px below the drop point).
 .PARAMETER Hold  Milliseconds to hover over the drop point before releasing (default 600).
@@ -12,7 +14,9 @@
   come from a helper process started just before the drag begins.
 #>
 param(
-  [Parameter(Mandatory = $true)][string]$Path,
+  [string]$Path = "",
+  [string]$Text = "",
+  [string]$Url = "",
   [Parameter(Mandatory = $true)][int]$ToX,
   [Parameter(Mandatory = $true)][int]$ToY,
   [int]$FromX = -1, [int]$FromY = -1,
@@ -51,7 +55,15 @@ $form.Activate()
 [System.Windows.Forms.Application]::DoEvents()
 
 $data = New-Object System.Windows.Forms.DataObject
-$data.SetData([System.Windows.Forms.DataFormats]::FileDrop, [string[]]@((Resolve-Path $Path).Path))
+if ($Url) {
+  $bytes = [Text.Encoding]::Unicode.GetBytes($Url + [char]0)
+  $data.SetData("UniformResourceLocatorW", (New-Object IO.MemoryStream(, $bytes)))
+  $data.SetData([System.Windows.Forms.DataFormats]::UnicodeText, $Url)
+} elseif ($Text) {
+  $data.SetData([System.Windows.Forms.DataFormats]::UnicodeText, $Text)
+} else {
+  $data.SetData([System.Windows.Forms.DataFormats]::FileDrop, [string[]]@((Resolve-Path $Path).Path))
+}
 
 # Press the button on the source window; DoDragDrop keeps going while it stays pressed.
 [void][In]::SetCursorPos($FromX, $FromY)
@@ -79,7 +91,8 @@ $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($helper))
 $proc = Start-Process powershell -ArgumentList "-NoProfile", "-EncodedCommand", $encoded -WindowStyle Hidden -PassThru
 
 try {
-  $effect = $form.DoDragDrop($data, [System.Windows.Forms.DragDropEffects]::Copy)
+  # Copy | Move like an editor offers; a well-behaved target must answer Copy, never Move.
+  $effect = $form.DoDragDrop($data, [System.Windows.Forms.DragDropEffects]::Copy -bor [System.Windows.Forms.DragDropEffects]::Move)
   Write-Output ("drag finished with effect: {0}" -f $effect)
 } finally {
   # Never leave a virtual button pressed, whatever happened above.

@@ -17,4 +17,12 @@ text: string | null,
 /**
  * Pass to `feed_undo` for «تراجع»; None when there is nothing to undo.
  */
-undo: string | null, };
+undo: string | null, 
+/**
+ * Size before (PDF compress).
+ */
+was: number | null, 
+/**
+ * Words, characters, lines (word count).
+ */
+counts: Array<number> | null, };

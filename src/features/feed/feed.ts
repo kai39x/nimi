@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { feedInfo, feedRun, feedUndo, pocketAdd, setOverlayExpanded } from "@/ipc/commands";
+import { feedInfo, feedRun, feedUndo, focusOverlay, pocketAdd, setOverlayExpanded } from "@/ipc/commands";
+import { Events, onEvent } from "@/ipc/events";
+import type { DropEvent } from "@/ipc/generated/DropEvent";
 import type { FeedAction } from "@/ipc/generated/FeedAction";
 import type { FeedResult } from "@/ipc/generated/FeedResult";
 import type { Meal } from "@/ipc/generated/Meal";
@@ -8,13 +9,19 @@ import type { Mood } from "@/features/character/rig/moods";
 import { setMoodOverride } from "@/features/character/useNimiMood";
 
 /**
- * Feeding NIMI (design spec §6, board 08 option B): the OS drag reaches the overlay (docs/PLAN.md
- * §2), and this store walks the flow — near → hungry (two drop zones: mouth / Nuri) → chomp →
- * chew → bubbles → result (or error). Dropping on Nuri puts the file in the pocket (§7).
+ * Feeding NIMI (design spec §6, board 08 option B): the overlay's own drop target
+ * (src-tauri/src/files/drop.rs) sends files, links and text, and this store walks the flow —
+ * near → hungry (two drop zones: mouth / Nuri) → chomp → chew → bubbles → result (or error).
+ * Dropping a file on Nuri puts it in the pocket (§7).
+ *
+ * A long job (a 6 GB ZIP) keeps going when the user clicks away: the stage closes, NIMI keeps
+ * his working face on the capsule (`bg`), and the result waits there until it is clicked.
  */
 
 export type Zone = "mouth" | "pocket" | null;
 export type Phase = "idle" | "near" | "hungry" | "chomp" | "chew" | "menu" | "working" | "result" | "error" | "pocketed";
+/** A second round of bubbles: the formats for «تحويل», or the page picker for a PDF. */
+export type Sub = "convert" | "pages" | null;
 
 export interface FeedState {
   phase: Phase;
@@ -22,21 +29,49 @@ export interface FeedState {
   /** Logical px in the overlay window, for the file flying into the mouth. */
   dropAt: { x: number; y: number } | null;
   paths: string[];
+  /** A dropped link or text (no files). */
+  text: string | null;
   meal: Meal | null;
   result: FeedResult | null;
   error: string | null;
   lastAction: FeedAction | null;
+  sub: Sub;
+  /** The stage is closed but the job (or its result) is still his: shown on the capsule. */
+  bg: boolean;
 }
 
-const IDLE: FeedState = { phase: "idle", zone: null, dropAt: null, paths: [], meal: null, result: null, error: null, lastAction: null };
+const IDLE: FeedState = {
+  phase: "idle",
+  zone: null,
+  dropAt: null,
+  paths: [],
+  text: null,
+  meal: null,
+  result: null,
+  error: null,
+  lastAction: null,
+  sub: null,
+  bg: false,
+};
 
 let state: FeedState = IDLE;
 const listeners = new Set<() => void>();
 const timers: number[] = [];
 
+/** The overlay never takes keyboard focus on its own; the page picker needs it to type. */
+let typing = false;
+function syncKeyboard() {
+  const want = state.phase === "menu" && state.sub === "pages" && !state.bg;
+  if (want !== typing) {
+    typing = want;
+    void focusOverlay(want);
+  }
+}
+
 function set(patch: Partial<FeedState>) {
   state = { ...state, ...patch };
   listeners.forEach((fn) => fn());
+  syncKeyboard();
 }
 
 function later(ms: number, fn: () => void) {
@@ -57,8 +92,7 @@ const MOOD: Partial<Record<Phase, Mood>> = {
 };
 
 function mood(phase: Phase) {
-  const m = MOOD[phase];
-  setMoodOverride(m ?? null);
+  setMoodOverride(MOOD[phase] ?? null);
 }
 
 /** Where the zones are, measured from NIMI's frame in the overlay (set by the Feed layer). */
@@ -83,27 +117,44 @@ function busy() {
   return ["chomp", "chew", "working"].includes(state.phase);
 }
 
-/** Back to the plain capsule. */
+/** Back to the plain capsule. While a job runs this only closes the stage (see `background`). */
 export function dismiss() {
+  if (state.phase === "working") return background();
   clearTimers();
   state = IDLE;
   listeners.forEach((fn) => fn());
+  syncKeyboard();
   setMoodOverride(null);
   void setOverlayExpanded(false);
 }
 
-async function eat(paths: string[], at: { x: number; y: number } | null) {
+/** Click outside mid-job: close the stage, keep the working face, finish quietly. */
+export function background() {
+  if (state.bg) return;
+  set({ bg: true, sub: null });
+  void setOverlayExpanded(false);
+}
+
+/** A click on the capsule while a job (or its result) waits there: open the stage again. */
+export function reopen() {
+  if (!state.bg) return;
   clearTimers();
-  set({ phase: "chomp", zone: null, dropAt: at, paths, result: null, error: null });
+  set({ bg: false });
+  void setOverlayExpanded(true);
+}
+
+async function eat(paths: string[], text: string | null, at: { x: number; y: number } | null) {
+  clearTimers();
+  set({ ...IDLE, phase: "chomp", dropAt: at, paths, text });
   mood("chomp");
   let meal: Meal | null = null;
   try {
-    meal = await feedInfo(paths);
+    meal = await feedInfo(paths, text);
   } catch (err) {
     fail(String(err));
     return;
   }
-  set({ meal });
+  set({ meal, text: meal.text ?? text });
   later(650, () => {
     set({ phase: "chew" });
     mood("chew");
@@ -119,27 +170,29 @@ async function eat(paths: string[], at: { x: number; y: number } | null) {
 function fail(error: string) {
   set({ phase: "error", error });
   setMoodOverride("error", 2500);
-  void setOverlayExpanded(true);
+  if (state.bg) later(30_000, () => state.bg && state.phase === "error" && dismiss());
+  else void setOverlayExpanded(true);
 }
 
-export async function runAction(action: FeedAction) {
-  if (!state.paths.length || busy()) return;
-  set({ phase: "working", lastAction: action });
+export async function runAction(action: FeedAction, target: string | null = null) {
+  if ((!state.paths.length && !state.text) || busy()) return;
+  set({ phase: "working", lastAction: action, sub: null });
   mood("working");
   try {
-    const result = await feedRun(action, state.paths);
+    const result = await feedRun(action, state.paths, state.text, target);
     set({ phase: "result", result });
     setMoodOverride("happy", 2200);
-    // Text results (OCR, archive listing) stay until clicked away; the rest fade after 7 s.
-    if (!result.text) {
-      later(7000, () => {
-        if (state.phase === "result") dismiss();
-      });
+    if (state.bg) {
+      // Finished behind the capsule: the pill says so; a click opens the full result.
+      later(30_000, () => state.bg && state.phase === "result" && dismiss());
+    } else if (!result.text && !result.counts) {
+      // Text results (OCR, listing, word count) stay until clicked away; the rest fade.
+      later(7000, () => state.phase === "result" && dismiss());
     }
   } catch (err) {
     const msg = String(err);
     if (msg === "cancelled") {
-      set({ phase: "menu" });
+      set({ phase: "menu", bg: false });
       mood("menu");
       return;
     }
@@ -147,16 +200,21 @@ export async function runAction(action: FeedAction) {
   }
 }
 
+/** Second round of bubbles («تحويل» formats, PDF pages) or back to the first. */
+export function openSub(sub: Sub) {
+  if (state.phase !== "menu") return;
+  set({ sub });
+}
+
 /** «حطّه في الجيب» from the bubbles (or a drop on Nuri). */
 export async function toPocket(paths = state.paths) {
+  if (!paths.length) return;
   clearTimers();
   await pocketAdd(paths);
   set({ phase: "pocketed", paths, result: null });
   setMoodOverride("happy", 1800);
   void setOverlayExpanded(true);
-  later(2600, () => {
-    if (state.phase === "pocketed") dismiss();
-  });
+  later(2600, () => state.phase === "pocketed" && dismiss());
 }
 
 export async function undo() {
@@ -172,8 +230,8 @@ export async function undo() {
 
 /** «حاول مرة ثانية»: back to the bubbles with the same meal. */
 export function retry() {
-  if (!state.paths.length) return dismiss();
-  set({ phase: "menu", error: null });
+  if (!state.paths.length && !state.text) return dismiss();
+  set({ phase: "menu", error: null, bg: false });
   mood("menu");
 }
 
@@ -187,27 +245,24 @@ export function useFeed(): FeedState {
   );
 }
 
-/** Wires the overlay's OS drag-and-drop events to the flow. Mount once (in the Shell). */
+/** Wires the overlay's drop events (`nimi://drop`) to the flow. Mount once (in the Shell). */
 export function useFeedDrops() {
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
-    void getCurrentWebview()
-      .onDragDropEvent((event) => {
-        const p = event.payload;
+  useEffect(
+    () =>
+      onEvent<DropEvent>(Events.drop, (e) => {
         const dpr = window.devicePixelRatio || 1;
-        const at = "position" in p ? { x: p.position.x / dpr, y: p.position.y / dpr } : null;
-        if (busy() || !enabled) return;
-        switch (p.type) {
+        const at = { x: e.x / dpr, y: e.y / dpr };
+        if (busy() || !enabled || state.bg) return;
+        switch (e.kind) {
           case "enter": {
             clearTimers();
-            const over = at ? nearOf(at.x, at.y) : false;
-            set({ ...IDLE, phase: over ? "hungry" : "near", paths: p.paths, zone: at ? zoneOf(at.x, at.y) : null });
+            const over = nearOf(at.x, at.y);
+            set({ ...IDLE, phase: over ? "hungry" : "near", paths: e.paths, text: e.text, zone: zoneOf(at.x, at.y) });
             mood(over ? "hungry" : "near");
             break;
           }
           case "over": {
-            if (!at || (state.phase !== "near" && state.phase !== "hungry")) break;
+            if (state.phase !== "near" && state.phase !== "hungry") break;
             const over = nearOf(at.x, at.y);
             const zone = over ? zoneOf(at.x, at.y) : null;
             const phase: Phase = over ? "hungry" : "near";
@@ -218,10 +273,12 @@ export function useFeedDrops() {
             break;
           }
           case "drop": {
-            const zone = at ? zoneOf(at.x, at.y) : state.zone;
-            const paths = p.paths.length ? p.paths : state.paths;
-            if (zone === "pocket") void toPocket(paths);
-            else if (zone === "mouth" || (at && nearOf(at.x, at.y))) void eat(paths, at);
+            const zone = zoneOf(at.x, at.y);
+            const paths = e.paths.length ? e.paths : state.paths;
+            const text = e.text ?? state.text;
+            // The pocket keeps files only; a link or text dropped on Nuri is eaten instead.
+            if (zone === "pocket" && paths.length) void toPocket(paths);
+            else if (zone || nearOf(at.x, at.y)) void eat(paths, paths.length ? null : text, at);
             else dismiss();
             break;
           }
@@ -229,14 +286,7 @@ export function useFeedDrops() {
             if (state.phase === "near" || state.phase === "hungry") dismiss();
             break;
         }
-      })
-      .then((fn) => {
-        if (cancelled) fn();
-        else unlisten = fn;
-      });
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, []);
+      }),
+    [],
+  );
 }

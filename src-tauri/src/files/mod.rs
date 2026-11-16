@@ -1,16 +1,22 @@
 //! Feeding NIMI (phase 6, design spec §6, board 08): what he ate, the actions the bubbles and
-//! «المزيد» offer, where results go, and «تراجع». Native Windows only — no new crates:
+//! «المزيد» offer, where results go, and «تراجع».
 //!
+//! - `drop`: the overlay's own OLE drop target (files, links, text).
 //! - `tar`: ZIP create / extract / list with Windows' own `tar.exe` (bsdtar, Windows 10 1803+).
-//! - `imaging`: PNG ↔ JPG, shrink, strip camera data with WIC.
-//! - `ocr`: «نسخ النص اللي فيها» with `Windows.Media.Ocr` (offline, installed languages).
+//! - `imaging`: convert (PNG, JPG, WebP, BMP, TIFF, ICO, PDF), shrink, strip camera data.
+//! - `pdf`: merge, keep pages, compress, text, pages as images, images → PDF.
+//! - `ocr`: «اقرأ النص» with `Windows.Media.Ocr` (offline, installed languages).
+//! - `link`: recognising links and the local safety check (opt-in OpenPhish list).
 //! - `shell`: clipboard (files / text), folder picker, Explorer, terminal, Recycle Bin, drag-out.
 //!
 //! Safety (CLAUDE.md): nothing is ever deleted permanently — undo of a created file sends it to
 //! the Recycle Bin, a moved file moves back; system paths are refused.
 
+pub mod drop;
 mod imaging;
+pub mod link;
 mod ocr;
+mod pdf;
 pub mod shell;
 mod tar;
 
@@ -138,15 +144,29 @@ fn size_of_path(p: &Path) -> u64 {
     total
 }
 
-pub fn meal(paths: &[String]) -> Result<Meal, String> {
+pub fn meal(app: &AppHandle, paths: &[String], text: Option<&str>) -> Result<Meal, String> {
+    if paths.is_empty() {
+        let text = text
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .ok_or("missing")?;
+        return Ok(text_meal(app, text));
+    }
     let items = checked(paths)?;
     let first = &items[0];
+    // A dropped Internet shortcut is a link.
+    if items.len() == 1 && ext(first) == "url" {
+        if let Some(url) = link::from_shortcut(first) {
+            return Ok(text_meal(app, url.as_str()));
+        }
+    }
+    let kind = if items.len() > 1 {
+        MealKind::Many
+    } else {
+        kind_of(first)
+    };
     Ok(Meal {
-        kind: if items.len() > 1 {
-            MealKind::Many
-        } else {
-            kind_of(first)
-        },
+        kind,
         name: first
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
@@ -158,7 +178,42 @@ pub fn meal(paths: &[String]) -> Result<Meal, String> {
             .sum(),
         count: items.len() as u32,
         paths: items.iter().map(|p| p.display().to_string()).collect(),
+        text: None,
+        pages: (kind == MealKind::Pdf)
+            .then(|| pdf::page_count(first))
+            .flatten(),
+        safety: None,
     })
+}
+
+/// A link (with its safety verdict) or a note.
+fn text_meal(app: &AppHandle, text: &str) -> Meal {
+    let url = link::parse(text);
+    let name: String = match &url {
+        Some(u) => u.host_str().unwrap_or_default().to_string(),
+        None => {
+            let line = text.lines().next().unwrap_or_default().trim();
+            let mut short: String = line.chars().take(40).collect();
+            if line.chars().count() > 40 || text.lines().nth(1).is_some() {
+                short.push('…');
+            }
+            short
+        }
+    };
+    Meal {
+        kind: if url.is_some() {
+            MealKind::Link
+        } else {
+            MealKind::Note
+        },
+        paths: vec![],
+        name,
+        bytes: text.len() as u64,
+        count: 1,
+        safety: url.as_ref().map(|u| link::check(app, u)),
+        text: Some(url.map_or_else(|| text.to_string(), |u| u.to_string())),
+        pages: None,
+    }
 }
 
 // --- where results go --------------------------------------------------------------------------
@@ -170,10 +225,12 @@ fn downloads() -> PathBuf {
 }
 
 /// The folder for a result, per «وين تروح النتيجة». `None` = the user cancelled the picker.
+/// With no original (a dropped text), «جنب الأصلي» means Downloads.
 fn output_dir(app: &AppHandle, items: &[PathBuf]) -> Option<PathBuf> {
     let setting = app.state::<SettingsStore>().get().results_location;
-    let parent = items[0]
-        .parent()
+    let parent = items
+        .first()
+        .and_then(|p| p.parent())
         .map(Path::to_path_buf)
         .unwrap_or_else(downloads);
     match setting {
@@ -214,16 +271,36 @@ fn result(action: FeedAction) -> FeedResult {
         folder: None,
         text: None,
         undo: None,
+        was: None,
+        counts: None,
     }
 }
 
 // --- actions -----------------------------------------------------------------------------------
 
-pub fn run(app: &AppHandle, action: FeedAction, paths: &[String]) -> Result<FeedResult, String> {
-    let items = checked(paths)?;
+pub fn run(
+    app: &AppHandle,
+    action: FeedAction,
+    paths: &[String],
+    text: Option<&str>,
+    target: Option<&str>,
+) -> Result<FeedResult, String> {
     let shared = app.state::<Arc<FilesShared>>().inner().clone();
-    let strs: Vec<String> = items.iter().map(|p| p.display().to_string()).collect();
     let mut r = result(action);
+    if matches!(
+        action,
+        FeedAction::OpenLink
+            | FeedAction::LinkShortcut
+            | FeedAction::CopyText
+            | FeedAction::SaveNote
+            | FeedAction::WordCount
+    ) {
+        let text = text.filter(|t| !t.trim().is_empty()).ok_or("missing")?;
+        run_text(app, &shared, &mut r, action, text)?;
+        return Ok(r);
+    }
+    let items = checked(paths)?;
+    let strs: Vec<String> = items.iter().map(|p| p.display().to_string()).collect();
     match action {
         FeedAction::Copy | FeedAction::Cut => {
             shell::copy_files(&strs, action == FeedAction::Cut).map_err(|e| e.to_string())?;
@@ -265,17 +342,98 @@ pub fn run(app: &AppHandle, action: FeedAction, paths: &[String]) -> Result<Feed
                 r.undo = Some(shared.remember(Undo::MoveBack(moved)));
             }
         }
-        FeedAction::ToPng | FeedAction::ToJpg | FeedAction::Shrink | FeedAction::StripMeta => {
+        FeedAction::Convert => {
+            let src = &items[0];
+            let to = target.ok_or("bad-target")?.to_lowercase();
+            let dir = output_dir(app, &items).ok_or("cancelled")?;
+            if kind_of(src) == MealKind::Pdf {
+                match to.as_str() {
+                    "txt" => {
+                        let text = pdf::text(src)?;
+                        let out = unique(&dir, &stem(src), "txt");
+                        write_text(&out, &text)?;
+                        r.text = Some(text);
+                        created(&shared, &mut r, vec![out]);
+                    }
+                    "png" => {
+                        let folder = unique(&dir, &format!("{} (pages)", stem(src)), "");
+                        std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+                        let pages = pdf::render(src, &folder, &stem(src), 500)
+                            .map_err(|e| e.message().to_string());
+                        if pages.is_err() {
+                            let _ = std::fs::remove_dir(&folder);
+                        }
+                        pages?;
+                        created(&shared, &mut r, vec![folder]);
+                    }
+                    _ => return Err("bad-target".into()),
+                }
+            } else {
+                if !imaging::targets_for(src).contains(&to.as_str()) {
+                    return Err("bad-target".into());
+                }
+                let px = imaging::decode(src, 1.0)?;
+                let out = unique(&dir, &stem(src), &to);
+                imaging::encode(&px, &out, &to)?;
+                created(&shared, &mut r, vec![out]);
+            }
+        }
+        FeedAction::Shrink | FeedAction::StripMeta => {
             let src = &items[0];
             let dir = output_dir(app, &items).ok_or("cancelled")?;
-            let (target_ext, suffix, scale) = match action {
-                FeedAction::ToPng => ("png", "", 1.0),
-                FeedAction::ToJpg => ("jpg", "", 1.0),
-                FeedAction::Shrink => (imaging::same_format_ext(src), " (small)", 0.5),
-                _ => (imaging::same_format_ext(src), " (clean)", 1.0),
+            let (suffix, scale) = if action == FeedAction::Shrink {
+                (" (small)", 0.5)
+            } else {
+                (" (clean)", 1.0)
             };
-            let out = unique(&dir, &format!("{}{suffix}", stem(src)), target_ext);
-            imaging::convert(src, &out, scale)?;
+            let fmt = imaging::same_format_ext(src);
+            let out = unique(&dir, &format!("{}{suffix}", stem(src)), fmt);
+            let px = imaging::decode(src, scale)?;
+            imaging::encode(&px, &out, fmt)?;
+            created(&shared, &mut r, vec![out]);
+        }
+        FeedAction::ImagesToPdf => {
+            let dir = output_dir(app, &items).ok_or("cancelled")?;
+            let mut pages = Vec::new();
+            for p in &items {
+                let px = imaging::decode(p, 1.0)?;
+                pages.push((px.w, px.h, imaging::jpeg_bytes(&px)?));
+            }
+            let name = if items.len() == 1 {
+                stem(&items[0])
+            } else {
+                format!("{} +{}", stem(&items[0]), items.len() - 1)
+            };
+            let out = unique(&dir, &name, "pdf");
+            pdf::from_jpegs(&pages, &out)?;
+            created(&shared, &mut r, vec![out]);
+        }
+        FeedAction::PdfMerge => {
+            let dir = output_dir(app, &items).ok_or("cancelled")?;
+            let name = format!("{} +{}", stem(&items[0]), items.len() - 1);
+            let out = unique(&dir, &name, "pdf");
+            pdf::merge(&items, &out)?;
+            created(&shared, &mut r, vec![out]);
+        }
+        FeedAction::PdfPages => {
+            let src = &items[0];
+            let spec = target.ok_or("bad-pages")?;
+            let dir = output_dir(app, &items).ok_or("cancelled")?;
+            let label: String = spec
+                .chars()
+                .filter(|c| !matches!(c, '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+                .take(24)
+                .collect();
+            let out = unique(&dir, &format!("{} (p {})", stem(src), label.trim()), "pdf");
+            pdf::pages(src, spec, &out)?;
+            created(&shared, &mut r, vec![out]);
+        }
+        FeedAction::PdfCompress => {
+            let src = &items[0];
+            let dir = output_dir(app, &items).ok_or("cancelled")?;
+            let out = unique(&dir, &format!("{} (small)", stem(src)), "pdf");
+            pdf::compress(src, &out)?;
+            r.was = Some(size_of_path(src));
             created(&shared, &mut r, vec![out]);
         }
         FeedAction::OcrText => {
@@ -337,8 +495,59 @@ pub fn run(app: &AppHandle, action: FeedAction, paths: &[String]) -> Result<Feed
             };
             shell::terminal(&dir).map_err(|e| e.to_string())?;
         }
+        _ => return Err("bad-action".into()),
     }
     Ok(r)
+}
+
+/// Link and note actions.
+fn run_text(
+    app: &AppHandle,
+    shared: &FilesShared,
+    r: &mut FeedResult,
+    action: FeedAction,
+    text: &str,
+) -> Result<(), String> {
+    match action {
+        FeedAction::CopyText => {
+            shell::copy_text(text).map_err(|e| e.to_string())?;
+        }
+        FeedAction::OpenLink => {
+            let url = link::parse(text).ok_or("bad-link")?;
+            shell::open_url(url.as_str()).map_err(|e| e.to_string())?;
+        }
+        FeedAction::LinkShortcut => {
+            let url = link::parse(text).ok_or("bad-link")?;
+            let dir = shell::desktop().unwrap_or_else(downloads);
+            let host = url.host_str().unwrap_or("link").trim_start_matches("www.");
+            let out = unique(&dir, host, "url");
+            std::fs::write(&out, format!("[InternetShortcut]\r\nURL={url}\r\n"))
+                .map_err(|e| e.to_string())?;
+            created(shared, r, vec![out]);
+        }
+        FeedAction::SaveNote => {
+            let dir = output_dir(app, &[]).ok_or("cancelled")?;
+            let out = unique(&dir, &format!("NIMI note {}", shell::local_stamp()), "txt");
+            write_text(&out, text)?;
+            created(shared, r, vec![out]);
+        }
+        FeedAction::WordCount => {
+            r.counts = Some(vec![
+                text.split_whitespace().count() as u32,
+                text.chars().filter(|c| !c.is_whitespace()).count() as u32,
+                text.lines().count().max(1) as u32,
+            ]);
+        }
+        _ => return Err("bad-action".into()),
+    }
+    Ok(())
+}
+
+/// UTF-8 with a BOM and Windows line ends, so Notepad shows Arabic right everywhere.
+fn write_text(out: &Path, text: &str) -> Result<(), String> {
+    let mut body = String::from("\u{feff}");
+    body.push_str(&text.replace("\r\n", "\n").replace('\n', "\r\n"));
+    std::fs::write(out, body).map_err(|e| e.to_string())
 }
 
 fn created(shared: &FilesShared, r: &mut FeedResult, outputs: Vec<PathBuf>) {

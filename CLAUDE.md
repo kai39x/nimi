@@ -1,6 +1,6 @@
 # NIMI — notes for Claude Code
 
-Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI.
+Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI. One opt-in exception Kai asked for: the daily OpenPhish list download for link checks (off by default; links never leave the PC).
 Talk to Kai in Arabic (casual). Code, comments and commit messages in English.
 
 ## Commands

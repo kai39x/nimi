@@ -103,6 +103,13 @@ fn apply_side_effects(app: &AppHandle, before: &Settings, after: &Settings) {
     if before.sounds_muted != after.sounds_muted {
         crate::tray::sync_mute(app);
     }
+    if before.phish_feed != after.phish_feed {
+        if after.phish_feed {
+            crate::files::link::refresh_feed(app);
+        } else {
+            crate::files::link::drop_feed();
+        }
+    }
 }
 
 /// Makes the Windows Run key match the setting (the setting is the source of truth).

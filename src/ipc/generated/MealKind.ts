@@ -3,4 +3,4 @@
 /**
  * What NIMI just ate — picks the bubbles and the «المزيد» actions.
  */
-export type MealKind = "image" | "archive" | "folder" | "pdf" | "text" | "other" | "many";
+export type MealKind = "image" | "archive" | "folder" | "pdf" | "text" | "other" | "many" | "link" | "note";

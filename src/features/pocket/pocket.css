@@ -255,3 +255,11 @@
   pointer-events: auto;
   cursor: pointer;
 }
+
+/* «نيمي بس»: the shell is NIMI's own circle and starts above the window top at bigger sizes, so
+   a top-corner badge was cut off. There it sits at his feet, inside the shell (and the hit rect). */
+.pocket-badge--nimiOnly {
+  top: auto;
+  bottom: calc(2px * var(--nimi-scale));
+  inset-inline-start: calc(-10px * var(--nimi-scale));
+}

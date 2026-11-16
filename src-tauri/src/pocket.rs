@@ -96,7 +96,7 @@ fn sweep(app: &AppHandle, mut items: Vec<Stored>) -> Vec<PocketItem> {
         PocketEmpty::Never => None,
     };
     let now = now_ms();
-    items.retain(|s| max_age.map_or(true, |age| now - s.added_ms < age));
+    items.retain(|s| max_age.is_none_or(|age| now - s.added_ms < age));
     items.retain(|s| !(s.seen_missing && !Path::new(&s.path).exists()));
     for s in &mut items {
         if !Path::new(&s.path).exists() {

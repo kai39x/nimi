@@ -2,9 +2,9 @@
 
 ## Where we are (2026-11-16)
 - Phases 0–5 done and pushed (`4326dd4` phase 5, Kai confirmed it works; Recycle Bin stays
-  pre-ticked in Boost). **Phase 6 (Feed & Pocket) committed as `phase 6:` (`23738cb`, not pushed).
-  Kai tested it and left 5 notes — do "Kai's notes on phase 6" below first, show him, get his OK,
-  then phase 7.**
+  pre-ticked in Boost). Phase 6 (Feed & Pocket) committed as `23738cb`; Kai's 5 notes on it are
+  built and committed as `phase 6.1:` (both **not pushed**). **Waiting for Kai to test 6.1 and OK
+  it; then phase 7.**
 - Talk to Kai in Arabic (casual). Commit at phase ends with the `phase N:` prefix; push only when
   asked, and say clearly when something is committed but not pushed.
 - Character v3: source of truth is `design/character/animation-lab.html` (+ `ANIMATION.md`,
@@ -13,7 +13,33 @@
   glow and roll (no idle CSS animations — see PLAN "What phase 5 taught us").
 - Peek «يطل»: `fullscreen.rs` reports `covered`, the hit-test loop `reveal`, `usePeek.ts` decides.
 
-## Kai's notes on phase 6 (2026-11-16) — do these next, in this order
+## Phase 6.1 — Kai's notes, built (2026-11-16)
+- **Drops**: `files/drop.rs` replaces wry's files-only `IDropTarget` on the overlay's WebView2
+  child windows (installed in setup and again 1.5 s later) and emits `nimi://drop` with files,
+  a link (`UniformResourceLocatorW`) or text. Answers COPY/LINK, never MOVE (sources keep their
+  text). Ignores our own pocket drag-out. The frontend no longer uses `onDragDropEvent`.
+- **Formats** (second bubble arc, `Sub = "convert"`): images → PNG / JPG / WebP / PDF / ICO / BMP /
+  TIFF (`imaging.rs`: one RGBA pipeline; WIC encodes PNG/JPG/BMP/TIFF, `webp` crate q 82, `image`
+  for ICO and WebP decoding, PDF via `pdf.rs`); PDF → text / page images.
+- **PDF** (`pdf.rs`): merge, keep pages (picker takes keyboard focus via `focusOverlay`; accepts
+  Arabic digits), compress (`already-small` under 3 %), text (`pdf-extract`, OCR of rendered pages
+  for scans), pages as PNG (`Windows.Data.Pdf`), images → one PDF (hand-written JPEG embed).
+- **Links / text** (`link.rs`): open (asks twice when dangerous), copy, desktop `.url` shortcut,
+  offline heuristics + opt-in OpenPhish feed (setting «فحص الروابط بقائمة OpenPhish», off by
+  default, daily download through `Windows.Web.Http`, matched locally). Text: copy, save note
+  (Downloads), word count. `.url` files count as links.
+- **Background jobs**: a click outside while working closes the stage (`bg`), keeps the working
+  face, disables peek, shows «أشتغل عليه…» → «خلصت! اضغطني» (30 s); a click on the capsule reopens
+  the result with undo.
+- **Pocket**: badge at NIMI's feet in «نيمي بس» (it was above the window top); right-click menu
+  has «افتح الجيب (n)».
+- **Wheel** (Kai's report while testing): the wheel is the volume knob on the bare capsule only;
+  over a feed stage (scrolling a long text result) or the right-click menu it no longer changes
+  the volume.
+- New crates: `lopdf`, `pdf-extract`, `webp`, `image` (ico/png/webp), `url`. MSRV → 1.85.
+- Not done: progress % for big ZIPs (tar.exe gives none for one big file).
+
+## Kai's notes on phase 6 (2026-11-16) — the request, kept for reference
 Kai allows downloading any crate / npm library these need (no need to ask again).
 
 1. **Pocket badge invisible in «نيمي بس»**, worse at bigger NIMI sizes, so the pocket can't be

@@ -482,3 +482,166 @@
     animation-duration: 1ms;
   }
 }
+
+/* --- phase 6.1: formats, PDF pages, links ------------------------------------------------------ */
+
+/* A format name in the ball («PNG», «WEBP») instead of an icon. */
+.bubble__badge {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--n-butter);
+}
+
+/* «افتحه» on a dangerous link asks once more. */
+.bubble.is-armed .bubble__ball {
+  box-shadow:
+    inset 0 0 0 2px var(--n-danger),
+    inset 0 0 14px color-mix(in srgb, var(--n-danger) 30%, transparent),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+  color: var(--n-danger);
+}
+
+.bubble.is-armed .bubble__label {
+  background: color-mix(in srgb, var(--n-danger) 70%, #000);
+}
+
+/* «فحص الرابط» card under the pill (link meals have no «المزيد»). */
+.feed-safety {
+  position: absolute;
+  top: calc(var(--cy) + 290px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 380px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  pointer-events: auto;
+  animation: pill-in 240ms var(--n-ease-out) 220ms both;
+}
+
+.feed-safety__icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.feed-safety--safe .feed-safety__icon {
+  background: color-mix(in srgb, var(--n-ok) 18%, transparent);
+  color: var(--n-ok);
+}
+
+.feed-safety--caution .feed-safety__icon {
+  background: color-mix(in srgb, var(--n-warn) 18%, transparent);
+  color: var(--n-warn);
+}
+
+.feed-safety--danger {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--n-danger) 55%, transparent);
+}
+
+.feed-safety--danger .feed-safety__icon {
+  background: color-mix(in srgb, var(--n-danger) 20%, transparent);
+  color: var(--n-danger);
+}
+
+.feed-safety__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.feed-safety__text strong {
+  font-size: var(--n-fs-label);
+}
+
+.feed-safety--danger .feed-safety__text strong {
+  color: var(--n-danger);
+}
+
+.feed-safety__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.feed-safety__reasons span {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--n-fill);
+  font-size: var(--n-fs-caption);
+}
+
+.feed-safety__text small {
+  color: var(--n-muted);
+  font-size: var(--n-fs-caption);
+}
+
+.shell.shell--feed-menu:has(.feed-safety) {
+  height: 500px;
+}
+
+/* «أي صفحات تبي؟» */
+.feed-pages {
+  position: absolute;
+  top: calc(var(--cy) + 110px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  pointer-events: auto;
+  animation: pill-in 220ms var(--n-ease-spring) both;
+}
+
+.feed-pages label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feed-pages label small {
+  color: var(--n-muted);
+  font-size: var(--n-fs-caption);
+}
+
+.feed-pages input {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--n-line);
+  border-radius: 12px;
+  background: var(--n-fill);
+  color: var(--n-text);
+  font: inherit;
+  font-size: var(--n-fs-body);
+  outline: none;
+}
+
+.feed-pages input:focus {
+  border-color: var(--n-butter);
+}
+
+.feed-pages__row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.feed-pages .pill-btn {
+  height: 30px;
+  font-size: var(--n-fs-caption);
+}
+
+.feed-toast .pill-btn.is-done {
+  color: var(--n-ok);
+}

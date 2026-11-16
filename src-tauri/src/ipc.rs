@@ -35,6 +35,8 @@ pub mod events {
     pub const SYSTEM_STATS: &str = "nimi://system/stats";
     pub const SYSTEM_SCAN: &str = "nimi://system/scan";
     pub const POCKET_CHANGED: &str = "nimi://pocket/changed";
+    /// [`DropEvent`]: OS drag-and-drop over the overlay (files, links, text).
+    pub const DROP: &str = "nimi://drop";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -100,6 +102,9 @@ pub struct Settings {
     pub results_location: ResultsLocation,
     /// «الجيب يفضى»: when the pocket empties itself.
     pub pocket_empty: PocketEmpty,
+    /// «فحص الروابط بقائمة OpenPhish»: download the public phishing list once a day and check
+    /// dropped links against it locally. Off by default: NIMI stays offline unless asked.
+    pub phish_feed: bool,
     /// Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
     #[ts(type = "number")]
     pub first_run_ms: u64,
@@ -123,6 +128,7 @@ impl Default for Settings {
             peek_over_maximized: true,
             results_location: ResultsLocation::NextToOriginal,
             pocket_empty: PocketEmpty::Day,
+            phish_feed: false,
             first_run_ms: 0,
         }
     }
@@ -802,6 +808,10 @@ pub enum MealKind {
     Other,
     /// More than one item.
     Many,
+    /// A dragged web link (or a `.url` shortcut file).
+    Link,
+    /// Dragged text (a selection from a browser or an editor).
+    Note,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
@@ -815,6 +825,57 @@ pub struct Meal {
     #[ts(type = "number")]
     pub bytes: u64,
     pub count: u32,
+    /// The link or the text, for `Link` / `Note` meals.
+    pub text: Option<String>,
+    /// Page count of a PDF.
+    pub pages: Option<u32>,
+    /// Offline safety verdict for a link.
+    pub safety: Option<LinkSafety>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SafetyLevel {
+    Safe,
+    Caution,
+    Danger,
+}
+
+/// «فحص الرابط»: heuristics run locally; `listed` only when the opt-in OpenPhish list matched.
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LinkSafety {
+    pub level: SafetyLevel,
+    /// Reason codes: http, ip, punycode, at, subdomains, shortener, tld, brand, long, listed.
+    pub reasons: Vec<String>,
+    pub host: String,
+    /// The OpenPhish list is on and was loaded (so "not listed" means something).
+    pub feed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum DropKind {
+    Enter,
+    Over,
+    Leave,
+    Drop,
+}
+
+/// The overlay's own OLE drop target (files/drop.rs). Position in physical client px.
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DropEvent {
+    pub kind: DropKind,
+    pub paths: Vec<String>,
+    /// A link or text when no files were dragged.
+    pub text: Option<String>,
+    pub x: i32,
+    pub y: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -826,8 +887,8 @@ pub enum FeedAction {
     CopyPath,
     Zip,
     Move,
-    ToPng,
-    ToJpg,
+    /// To the format in `target` (png, jpg, webp, bmp, tiff, ico, pdf for images; txt, png for PDF).
+    Convert,
     Shrink,
     OcrText,
     StripMeta,
@@ -836,6 +897,16 @@ pub enum FeedAction {
     ListArchive,
     FolderSize,
     Terminal,
+    PdfMerge,
+    /// Keep the pages in `target` («1-3, 5»).
+    PdfPages,
+    PdfCompress,
+    ImagesToPdf,
+    OpenLink,
+    LinkShortcut,
+    CopyText,
+    SaveNote,
+    WordCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
@@ -853,6 +924,11 @@ pub struct FeedResult {
     pub text: Option<String>,
     /// Pass to `feed_undo` for «تراجع»; None when there is nothing to undo.
     pub undo: Option<String>,
+    /// Size before (PDF compress).
+    #[ts(type = "number | null")]
+    pub was: Option<u64>,
+    /// Words, characters, lines (word count).
+    pub counts: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
@@ -874,8 +950,14 @@ pub struct PocketItem {
 }
 
 #[tauri::command]
-pub fn feed_info(paths: Vec<String>) -> Result<Meal, String> {
-    files::meal(&paths)
+pub async fn feed_info(
+    app: AppHandle,
+    paths: Vec<String>,
+    text: Option<String>,
+) -> Result<Meal, String> {
+    tauri::async_runtime::spawn_blocking(move || files::meal(&app, &paths, text.as_deref()))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -883,10 +965,20 @@ pub async fn feed_run(
     app: AppHandle,
     action: FeedAction,
     paths: Vec<String>,
+    text: Option<String>,
+    target: Option<String>,
 ) -> Result<FeedResult, String> {
-    tauri::async_runtime::spawn_blocking(move || files::run(&app, action, &paths))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        files::run(&app, action, &paths, text.as_deref(), target.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// «نسخ النص» on a text result (OCR, PDF text).
+#[tauri::command]
+pub fn copy_text(text: String) -> Result<(), String> {
+    files::shell::copy_text(&text).map_err(|e| e.to_string())
 }
 
 /// «تراجع»: created files go to the Recycle Bin, moved files go back.
@@ -934,7 +1026,7 @@ pub async fn pocket_run(
     let paths = pocket::paths(&app, &ids);
     let result = tauri::async_runtime::spawn_blocking({
         let app = app.clone();
-        move || files::run(&app, action, &paths)
+        move || files::run(&app, action, &paths, None, None)
     })
     .await
     .map_err(|e| e.to_string())??;

@@ -267,6 +267,9 @@ export function SettingsWindow() {
                   onChange={(pocketEmpty) => void updateSettings({ pocketEmpty })}
                 />
               </Row>
+              <Row title={t("settings.phishFeed")} sub={t("settings.phishFeed.sub")}>
+                <Toggle label={t("settings.phishFeed")} checked={settings.phishFeed} onChange={(phishFeed) => void updateSettings({ phishFeed })} />
+              </Row>
               <Row title={t("settings.deleteTo")} sub={t("settings.deleteTo.sub")}>
                 <Toggle label={t("settings.deleteTo")} checked disabled onChange={() => {}} />
               </Row>

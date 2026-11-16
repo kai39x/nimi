@@ -15,10 +15,11 @@ export function CapsulePill({ children, tone }: { children: ReactNode; tone?: "b
 }
 
 /**
- * Right-click menu (spec §4, board 07): next, previous, mute NIMI sounds, hide NIMI for an hour.
+ * Right-click menu (spec §4, board 07): the pocket (when it holds something), next, previous,
+ * mute NIMI sounds, hide NIMI for an hour.
  * It is its own hit rect; clicks inside never reach the capsule underneath.
  */
-export function CapsuleMenu({ onClose }: { onClose: () => void }) {
+export function CapsuleMenu({ onClose, pocketCount = 0, onPocket }: { onClose: () => void; pocketCount?: number; onPocket?: () => void }) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const settings = useSettings();
@@ -51,6 +52,7 @@ export function CapsuleMenu({ onClose }: { onClose: () => void }) {
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.stopPropagation()}
     >
+      {pocketCount > 0 && onPocket && item(t("menu.pocket").replace("{n}", String(pocketCount)), onPocket)}
       {item(t("menu.next"), media.next, !song || !m.canNext)}
       {item(t("menu.prev"), media.previous, !song || !m.canPrev)}
       {item(t(muted ? "menu.unmute" : "menu.mute"), () => void updateSettings({ soundsMuted: !muted }))}

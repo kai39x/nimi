@@ -5,7 +5,7 @@ description = "NIMI — a small desktop companion that lives at the top of your 
 authors = ["kai"]
 license = "MIT"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.85"
 
 [lib]
 name = "nimi_lib"
@@ -24,6 +24,7 @@ ts-rs = { version = "12.0.1", features = ["serde-compat"] }
 tauri-plugin-autostart = "2"
 windows-core = "0.62"
 windows = { version = "0.62", features = [
+    "Data_Pdf",
     "Foundation",
     "Foundation_Collections",
     "Globalization",
@@ -64,8 +65,14 @@ windows = { version = "0.62", features = [
     "Win32_UI_Shell",
     "Win32_UI_Shell_Common",
     "Win32_UI_WindowsAndMessaging",
+    "Web_Http",
 ] }
 tauri-plugin-log = "2"
+lopdf = "0.42"
+pdf-extract = "0.12.1"
+webp = "0.3.1"
+image = { version = "0.25.6", default-features = false, features = ["ico", "png", "webp"] }
+url = "2.5.8"
 
 [profile.release]
 codegen-units = 1

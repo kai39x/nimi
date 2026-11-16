@@ -70,8 +70,10 @@ export const runBoost = (plan: BoostPlan) => invoke<BoostResult>("run_boost", { 
 export const restorePower = () => invoke<void>("restore_power");
 
 // Feeding & pocket (phase 6)
-export const feedInfo = (paths: string[]) => invoke<Meal>("feed_info", { paths });
-export const feedRun = (action: FeedAction, paths: string[]) => invoke<FeedResult>("feed_run", { action, paths });
+export const feedInfo = (paths: string[], text: string | null = null) => invoke<Meal>("feed_info", { paths, text });
+export const feedRun = (action: FeedAction, paths: string[], text: string | null = null, target: string | null = null) =>
+  invoke<FeedResult>("feed_run", { action, paths, text, target });
+export const copyText = (text: string) => invoke<void>("copy_text", { text });
 export const feedUndo = (token: string) => invoke<void>("feed_undo", { token });
 export const openFolder = (path: string) => invoke<void>("open_folder", { path });
 export const pocketList = () => invoke<PocketItem[]>("pocket_list");

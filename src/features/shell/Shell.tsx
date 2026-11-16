@@ -13,7 +13,7 @@ import { setAmbientMood, useNimiMood } from "@/features/character/useNimiMood";
 import { hasSong, media, useMedia, useMusicActive, useVolume } from "@/features/music/media";
 import { MusicCapsule, MusicIsland, useRememberPlayer } from "@/features/music/Music";
 import { Panel } from "@/features/panel/Panel";
-import { dismiss as dismissFeed, setFeedEnabled, useFeed, useFeedDrops } from "@/features/feed/feed";
+import { dismiss as dismissFeed, reopen as reopenFeed, setFeedEnabled, useFeed, useFeedDrops } from "@/features/feed/feed";
 import { FeedLayer, useFeedZones } from "@/features/feed/FeedLayer";
 import { PocketTray, usePocket } from "@/features/pocket/Pocket";
 import type { TabId } from "@/features/panel/TabBar";
@@ -90,7 +90,9 @@ export function Shell() {
   // --- feeding (board 08) and the pocket (board 09) -------------------------------------------
   useFeedDrops();
   const feed = useFeed();
-  const feeding = feed.phase !== "idle";
+  // The feeding stage is open. A job left running behind the capsule (`bg`) doesn't count: the
+  // capsule stays itself, with NIMI's working face and a pill, until the result is clicked.
+  const feeding = feed.phase !== "idle" && !feed.bg;
   const pocket = usePocket();
   const pocketCount = pocket.filter((p) => !p.missing).length;
   useEffect(() => setFeedEnabled(mode === "compact"), [mode]);
@@ -198,7 +200,9 @@ export function Shell() {
   useEffect(() => () => window.clearTimeout(meterTimer.current), []);
 
   const onWheel = (e: WheelEvent) => {
-    if (expanded || !volume.available) return;
+    // Only the bare capsule is a volume knob: over a feed stage (e.g. a long text result) or the
+    // right-click menu the wheel scrolls that content instead.
+    if (expanded || feeding || menuOpen || !volume.available) return;
     const notches = Math.max(-3, Math.min(3, -e.deltaY / 100));
     media.setVolume(media.volume().level + notches * WHEEL_STEP);
   };
@@ -210,12 +214,13 @@ export function Shell() {
   const musicLook = !expanded && !feeding && musicActive && capsuleStyle !== "nimiOnly";
 
   // «يطل»: over a maximized window only a 12 px strip stays; it alone takes the mouse.
-  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding });
+  // No «يطل» while a job runs behind the capsule (or its result waits): Kai wants to see it working.
+  const peek = usePeek({ enabled: settings?.peekOverMaximized ?? true, expanded: expanded || menuOpen || feeding || feed.bg });
   useHitRect(ref, "shell", !peek);
   useHitRect(stripRef, "peek", peek);
 
   // The hit rect follows the shell box, which changes shape with the style, music and peek.
-  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, feed.phase, trackMorph]);
+  useEffect(() => trackMorph(), [capsuleStyle, peek, musicLook, feed.phase, feed.bg, trackMorph]);
 
   const vars = {
     "--nimi-scale": scale,
@@ -285,6 +290,11 @@ export function Shell() {
             closeMenu();
             return;
           }
+          if (feed.bg) {
+            window.clearTimeout(pendingOpen.current);
+            reopenFeed();
+            return;
+          }
           // A pocket satellite (or the pocket badge) opens the pocket tray (spec §7).
           if ((e.target as Element).closest(".n-sat, .pocket-badge")) {
             window.clearTimeout(pendingOpen.current);
@@ -336,12 +346,20 @@ export function Shell() {
         <PocketTray open={mode === "pocket"} onClose={close} />
         {feeding && mode === "compact" && <FeedLayer nimiCenter={FEED_NIMI_CENTER} />}
         {!expanded && !feeding && !peek && pocketCount > 0 && (
-          <span className="pocket-badge" title={t("pocket.title")}>
+          <span className={`pocket-badge pocket-badge--${capsuleStyle}`} title={t("pocket.title")}>
             <Icon name="pocket" size={12} />
             {pocketCount}
           </span>
         )}
-        {!expanded && !peek && menuOpen && <CapsuleMenu onClose={closeMenu} />}
+        {!expanded && !peek && menuOpen && (
+          <CapsuleMenu onClose={closeMenu} pocketCount={pocketCount} onPocket={() => window.setTimeout(() => show("pocket"), 0)} />
+        )}
+        {!expanded && !peek && !menuOpen && !pill && feed.bg && (
+          <CapsulePill key={`feed-${feed.phase}`} tone={feed.phase === "result" ? "butter" : undefined}>
+            <Icon name={feed.phase === "working" ? "timer" : feed.phase === "result" ? "check" : "info"} size={14} className="capsule-pill__icon" />
+            <bdi>{t(feed.phase === "working" ? "feed.bg.working" : feed.phase === "result" ? "feed.bg.done" : "feed.bg.failed")}</bdi>
+          </CapsulePill>
+        )}
         {!expanded && !peek && !menuOpen && pill && (
           <CapsulePill key={pill.kind} tone={pill.kind === "volume" ? "butter" : undefined}>
             {pill.icon && <Icon name={pill.icon} size={14} className="capsule-pill__icon" />}

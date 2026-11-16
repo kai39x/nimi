@@ -48,6 +48,11 @@ resultsLocation: ResultsLocation,
  */
 pocketEmpty: PocketEmpty, 
 /**
+ * «فحص الروابط بقائمة OpenPhish»: download the public phishing list once a day and check
+ * dropped links against it locally. Off by default: NIMI stays offline unless asked.
+ */
+phishFeed: boolean, 
+/**
  * Unix time (ms) of the very first launch — «معك من N يوم». 0 until set.
  */
 firstRunMs: number, };

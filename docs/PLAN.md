@@ -169,6 +169,23 @@ Extremely fast cursor flicks across the zone between two 16 ms polls are not rea
   with Windows 10+), `SHCreateDataObject` + `SHDoDragDrop` for drag-out (main thread),
   `SHFileOperationW` for the Recycle Bin.
 
+### What phase 6.1 taught us (drops of text and links, formats, background jobs)
+
+- **wry's drop target takes files only.** Its `IDropTarget` answers `DROPEFFECT_NONE` to any drag
+  without `CF_HDROP`, so a browser link or a text selection never reached the page. `files/drop.rs`
+  revokes it on the overlay's WebView2 child windows and registers ours (main thread; again after
+  1.5 s in case WebView2 adds its input window late). Ours must answer COPY or LINK — a source
+  that offers MOVE (an editor) deletes the dragged text when the target says MOVE.
+- A left/right click sent before the hit-test loop has made the overlay interactive goes to the
+  window behind it. In tests, hover first and wait ~1 s; a stray right-click opened a Claude app
+  context menu (`#32768`) that then swallowed every later click over the capsule.
+- WinRT async in windows 0.62: `.join()` (not `.get()`).
+- `lopdf` 0.42 (needed by `pdf-extract` 0.12) wants Rust 1.85, so MSRV moved to 1.85.
+- The page picker types into the overlay, which never takes focus on its own: `feed.ts` calls
+  `focusOverlay(true)` only while the picker is shown.
+- A background job must also switch peek off, or the capsule rises and the working face and pill
+  are gone — exactly what Kai saw.
+
 ## 3. SMTC — media
 
 - `windows` crate, features `Media_Control`, `Storage_Streams`, `Foundation`, `Foundation_Collections`. One

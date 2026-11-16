@@ -79,6 +79,7 @@ pub fn run() {
             ipc::feed_info,
             ipc::feed_run,
             ipc::feed_undo,
+            ipc::copy_text,
             ipc::open_folder,
             ipc::pocket_list,
             ipc::pocket_add,
@@ -117,6 +118,18 @@ pub fn run() {
             media::spawn(handle);
             system::spawn(handle);
             pocket::spawn(handle);
+            files::drop::install(handle);
+            {
+                // WebView2 may add its input window a moment after the controller: install again.
+                let handle = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    files::drop::install(&handle);
+                });
+            }
+            if current.phish_feed {
+                files::link::refresh_feed(handle);
+            }
             if std::env::args().any(|arg| arg == "--settings") {
                 window::settings_window::open(handle)?;
             }
