@@ -77,6 +77,33 @@ pub fn app_info(app: AppHandle) -> AppInfo {
     }
 }
 
+/// The result of the manual update check (About page).
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateInfo {
+    pub current: String,
+    pub latest: String,
+    /// `latest` is newer than the running version.
+    pub newer: bool,
+    /// The release page to open (always under github.com/kai39x/nimi/releases/).
+    pub url: String,
+}
+
+/// Asks GitHub for the latest release — only when the user presses the button.
+#[tauri::command]
+pub async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
+    let current = app.package_info().version.to_string();
+    tauri::async_runtime::spawn_blocking(move || crate::update::check(&current))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn open_update_page(url: String) -> Result<(), String> {
+    crate::update::open_page(&url)
+}
+
 // ---------------------------------------------------------------------------------------------
 // Settings
 

@@ -123,6 +123,12 @@ fn apply_side_effects(app: &AppHandle, before: &Settings, after: &Settings) {
 
 /// Makes the Windows Run key match the setting (the setting is the source of truth).
 pub fn sync_autostart(app: &AppHandle, enabled: bool) -> Result<(), tauri_plugin_autostart::Error> {
+    // A dev build would register its own `target\debug\nimi.exe` in the Run key and take over the
+    // installed NIMI's autostart (it did, during testing). Dev builds leave the key alone.
+    if cfg!(debug_assertions) {
+        log::info!("autostart {enabled}: not applied in a dev build");
+        return Ok(());
+    }
     let launcher = app.autolaunch();
     match (enabled, launcher.is_enabled()?) {
         (true, false) => launcher.enable(),

@@ -1,6 +1,6 @@
 # NIMI — notes for Claude Code
 
-Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI. One opt-in exception Kai asked for: the daily OpenPhish list download for link checks (off by default; links never leave the PC).
+Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI. Two exceptions Kai asked for: the daily OpenPhish list download for link checks (opt-in, off by default; links never leave the PC), and About → «تحقق من التحديثات», which asks the GitHub API for the latest release only when pressed (`src-tauri/src/update.rs`; never downloads or installs).
 Talk to Kai in Arabic (casual). Code, comments and commit messages in English.
 
 ## Commands
@@ -14,10 +14,12 @@ Talk to Kai in Arabic (casual). Code, comments and commit messages in English.
 | DPI-correct screenshot for phase evidence | `powershell -File scripts/screenshot.ps1 -Out docs/evidence/<name>.png [-X -Y -W -H]` |
 | Drive a running webview (dev build started with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`) | `python scripts/cdp.py --list` · `python scripts/cdp.py --index 1 "<js>"` |
 | Profile a running webview (trace summary: paints, raster, GPU per second) | `python scripts/cdp_trace.py --index <n> --seconds 3` |
+| Real-input end-to-end tests (tour, capsule, command bar) on the running dev build — run before every release | `python scripts/e2e.py [tour] [capsule] [command]` |
+| Re-record the README header GIF (dev build running, plain background behind the capsule) | `python scripts/record-gif.py docs/screenshots/nimi.gif --width 640` |
 | Real OLE file drag for drop tests (STA) | `powershell -STA -File scripts/drag-file.ps1 -Path <file> -ToX <px> -ToY <px>` |
 
 Portable exe: `src-tauri/target/release/nimi.exe`. Installer: `src-tauri/target/release/bundle/nsis/`.
-Release: bump `version` in `package.json` and `src-tauri/tauri.conf.json`, then push a `v<version>` tag — `.github/workflows/release.yml` builds both and publishes a GitHub Release.
+Release: run `python scripts/e2e.py`, write the version's section in `CHANGELOG.md` (the workflow uses it as the release notes and fails without it), bump `version` in `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`/`Cargo.lock`, then push a `v<version>` tag — `.github/workflows/release.yml` builds both, signs them once SignPath is set up (`docs/SIGNING.md`), and publishes a GitHub Release.
 Tauri downloads NSIS into `%LOCALAPPDATA%\tauri` on the first `tauri build` (user-scoped, no admin).
 
 ## Read first

@@ -30,6 +30,7 @@ import type { TimerKind } from "./generated/TimerKind";
 import type { TimerState } from "./generated/TimerState";
 import type { Tool } from "./generated/Tool";
 import type { TrayState } from "./generated/TrayState";
+import type { UpdateInfo } from "./generated/UpdateInfo";
 import type { UserShortcut } from "./generated/UserShortcut";
 import type { VolumeState } from "./generated/VolumeState";
 
@@ -39,6 +40,9 @@ import type { VolumeState } from "./generated/VolumeState";
  */
 
 export const appInfo = () => invoke<AppInfo>("app_info");
+/** Asks GitHub for the latest release: only from the About button (NIMI is offline otherwise). */
+export const checkUpdate = () => invoke<UpdateInfo>("check_update");
+export const openUpdatePage = (url: string) => invoke<void>("open_update_page", { url });
 
 // Settings
 export const getSettings = () => invoke<Settings>("get_settings");

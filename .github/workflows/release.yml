@@ -49,6 +49,61 @@ jobs:
           Get-ChildItem dist-release | ForEach-Object { $_.Name }
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      # Code signing through SignPath (docs/SIGNING.md). Skipped until the project is approved and
+      # the repository has the SIGNPATH_* variables and the SIGNPATH_API_TOKEN secret. SignPath
+      # waits for each release to be approved by hand there, then the signed files replace these.
+      - name: Upload the unsigned files for signing
+        id: unsigned
+        if: startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimi-unsigned
+          path: dist-release/*.exe
+
+      - name: Sign with SignPath
+        if: steps.unsigned.outcome == 'success'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: dist-signed
+
+      - name: Use the signed files
+        if: steps.unsigned.outcome == 'success'
+        shell: pwsh
+        run: |
+          Copy-Item dist-signed/*.exe dist-release/ -Force
+          Get-ChildItem dist-release/*.exe | ForEach-Object {
+            $sig = Get-AuthenticodeSignature $_.FullName
+            "{0}: {1}" -f $_.Name, $sig.Status
+            if ($sig.Status -ne 'Valid') { throw "$($_.Name) is not signed" }
+          }
+
+      # The notes are this version's section of CHANGELOG.md (from its "## x.y.z" heading to the
+      # next one). A tag without a section fails here, so every release gets written notes.
+      - name: Release notes from CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = "${{ steps.files.outputs.version }}"
+          $lines = Get-Content CHANGELOG.md -Encoding utf8
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^## $([regex]::Escape($version))(\s|$)") { $start = $i + 1; break }
+          }
+          if ($start -lt 0) { throw "CHANGELOG.md has no '## $version' section" }
+          $end = $lines.Count
+          for ($i = $start; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^## ') { $end = $i; break } }
+          $body = ($lines[$start..($end - 1)] -join "`n").Trim()
+          $footer = "**Download:** ``NIMI_${version}_x64-setup.exe`` installs for your account (no admin); ``NIMI_${version}_portable.exe`` runs without installing. Windows 10 and 11."
+          Set-Content notes.md -Encoding utf8 -Value "$body`n`n---`n$footer"
+          Get-Content notes.md
+
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -57,7 +112,7 @@ jobs:
         run: |
           gh release create "${{ github.ref_name }}" dist-release/*.exe `
             --title "NIMI ${{ steps.files.outputs.version }}" `
-            --notes "NSIS installer (per-user, no admin) and a portable exe. Windows 10 and 11."
+            --notes-file notes.md
 
       - name: Keep the build (manual runs)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}

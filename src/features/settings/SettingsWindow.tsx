@@ -17,6 +17,7 @@ import { isWinter, nuriPace } from "@/lib/winter";
 import { Nimi } from "@/features/character/Nimi";
 import { DEFAULT_NIMI_SIZE } from "@/features/shell/constants";
 import { ALL_TILES } from "@/features/shortcuts/ShortcutsTab";
+import { UpdateCheck } from "./UpdateCheck";
 import "./settings.css";
 
 type SectionId = "general" | "character" | "capsule" | "notifications" | "feed" | "sounds" | "shortcuts" | "privacy" | "about";
@@ -319,6 +320,7 @@ export function SettingsWindow() {
                 {info?.debug ? ` · ${t("settings.about.dev")}` : ""}
               </div>
               <p className="about__line">{t("settings.about.line")}</p>
+              <UpdateCheck />
               <ul className="about__facts">
                 <li>{t("settings.about.local")}</li>
                 <li>{t("settings.about.os")}</li>

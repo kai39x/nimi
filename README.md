@@ -6,12 +6,13 @@
 
 **رفيق صغير يعيش فوق شاشتك** · **A little companion that lives on top of your screen**
 
-Windows 10 / 11 · عربي + English · 100% offline
+[![Latest version](https://img.shields.io/github/v/release/kai39x/nimi?label=version&color=FFE7A0&labelColor=15151C)](https://github.com/kai39x/nimi/releases/latest) [![Downloads](https://img.shields.io/github/downloads/kai39x/nimi/total?label=downloads&color=B7BEFF&labelColor=15151C)](https://github.com/kai39x/nimi/releases) [![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%2F%2011-9FF0D0?labelColor=15151C)](#en) [![MIT](https://img.shields.io/github/license/kai39x/nimi?color=FFB7D5&labelColor=15151C)](LICENSE)
+
+عربي + English · offline · no accounts · no tracking
 
 [**⬇ تحميل · Download**](https://github.com/kai39x/nimi/releases/latest) &nbsp;·&nbsp; [العربية](#ar) &nbsp;·&nbsp; [English](#en)
 
-<img src="docs/screenshots/capsule-music.png" width="440" alt="NIMI in his capsule, playing a song" />
-<img src="docs/screenshots/capsule-timer.png" width="283" alt="NIMI focused on a timer" />
+<img src="docs/screenshots/nimi.gif" width="640" alt="NIMI in his capsule: happy, curious, in love, singing, laughing, asleep and waking up" />
 
 </div>
 
@@ -25,7 +26,7 @@ Windows 10 / 11 · عربي + English · 100% offline
 
 نيمي شخصية لطيفة تسكن في كبسولة زجاجية صغيرة فوق نص الشاشة، ومعه قمره «نوري» يدور حوله. يحس ويتفاعل معك: ينعس إذا ما لعبت معه، يفرح إذا أطعمته ملف، ويتحمّس إذا كسرت رقمك في لعبة. وفي نفس الوقت أداة عملية: يشغّل أغانيك، يراقب جهازك، يحوّل ملفاتك، ويختصر عليك شغل كثير.
 
-كل شي يشتغل **على جهازك** بدون نت ولا حسابات ولا تتبع.
+كل شي يشتغل **على جهازك** بدون حسابات ولا تتبع، وبدون نت إلا في حالتين تختارهم أنت (تحت «الخصوصية»).
 
 ### وش يسوي
 
@@ -73,7 +74,9 @@ Windows 10 / 11 · عربي + English · 100% offline
 ### الخصوصية
 
 - كل شي محلي: ما فيه حسابات، ولا تتبع، ولا ذكاء اصطناعي، ولا يرسل أي بيانات.
-- الشي الوحيد اللي يستخدم النت، وهو مطفي من البداية: قائمة OpenPhish لفحص الروابط. تنزل مرة باليوم إذا شغّلتها، والفحص كله يصير على جهازك.
+- يستخدم النت في حالتين بس:
+  - قائمة OpenPhish لفحص الروابط، وهي مطفية من البداية. تنزل مرة باليوم إذا شغّلتها، والفحص كله يصير على جهازك.
+  - زر «تحقق من التحديثات» في «حول»: يسأل GitHub عن آخر نسخة لما تضغطه بس، وما ينزّل شي بنفسه.
 - سجل الحافظة في الذاكرة بس، وينمسح لما تقفل نيمي. كلمات السر من مدير كلمات السر ما تنحفظ.
 - الحذف دايم يروح لسلة المحذوفات.
 
@@ -87,7 +90,7 @@ Windows 10 / 11 · عربي + English · 100% offline
 
 NIMI is a cute character who lives in a small glass capsule at the top center of your screen, with his moon **Nuri** circling him. He reacts to you: he gets sleepy when ignored, happy when you feed him a file, and thrilled when you beat your record in a game. He is also a genuinely useful tool: he plays your music, watches your PC, converts your files and saves you lots of small chores.
 
-Everything runs **on your PC** — no internet, no accounts, no tracking.
+Everything runs **on your PC** — no accounts, no tracking, and offline except for the two opt-in cases under Privacy.
 
 ### What he does
 
@@ -133,7 +136,9 @@ Requires Windows 10 or 11. On first launch NIMI introduces himself in a tour tha
 ### Privacy
 
 - Fully local: no accounts, no telemetry, no AI, no data sent anywhere.
-- The only network use is opt-in and off by default: the OpenPhish phishing list for link checks, downloaded once a day and matched on your PC.
+- It goes online in only two cases:
+  - The OpenPhish phishing list for link checks: off by default, downloaded once a day when on, and matched on your PC.
+  - **Check for updates** in About: asks GitHub for the latest version only when you press it, and never downloads anything by itself.
 - Clipboard history lives in memory only and is gone when NIMI quits; password-manager copies are never kept.
 - Deleting always goes to the Recycle Bin.
 
@@ -147,7 +152,20 @@ npm run tauri dev      # run with hot reload
 npm run tauri build    # NSIS installer + exe in src-tauri/target/release
 ```
 
+Before a release, `python scripts/e2e.py` drives the running dev build with the real mouse and keyboard (the tour, the capsule and the command bar); see the top of that file. `python scripts/record-gif.py` re-records the GIF above.
+
 Built with [Tauri 2](https://tauri.app), React 19 and TypeScript. Font: Rubik (OFL). More in [`CLAUDE.md`](CLAUDE.md) and [`docs/`](docs/).
+
+### Code signing policy
+
+Windows builds will be signed with free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org), once the project is approved. Until then the files are unsigned.
+
+- Every release is built by GitHub Actions from this repository's source ([`release.yml`](.github/workflows/release.yml)), and each signing request is approved by hand.
+- Committers and reviewers: [kai39x](https://github.com/kai39x)
+- Approvers: [kai39x](https://github.com/kai39x)
+- Privacy: NIMI sends no data. It goes online only in the two opt-in cases listed under [Privacy](#privacy).
+
+Details: [`docs/SIGNING.md`](docs/SIGNING.md).
 
 ### License
 

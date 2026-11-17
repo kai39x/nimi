@@ -15,6 +15,7 @@ mod settings;
 mod system;
 mod tools;
 mod tray;
+mod update;
 mod window;
 
 use std::sync::Arc;
@@ -49,6 +50,8 @@ pub fn run() {
         .manage(Arc::new(files::FilesShared::default()))
         .invoke_handler(tauri::generate_handler![
             ipc::app_info,
+            ipc::check_update,
+            ipc::open_update_page,
             ipc::get_settings,
             ipc::set_settings,
             ipc::list_monitors,

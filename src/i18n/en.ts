@@ -615,7 +615,7 @@ export const en: Record<TKey, string> = {
   "settings.soundFeed": "Eating and bubble sounds",
   "settings.muteFullscreen": "Quiet in fullscreen",
   "settings.muteFullscreen.sub": "While you play or watch a video",
-  "settings.privacy.banner": "Everything stays on your PC. NIMI never goes online or sends data — except the OpenPhish list for link checks, if you turn it on yourself.",
+  "settings.privacy.banner": "Everything stays on your PC. NIMI never goes online or sends data — except the OpenPhish list for link checks, if you turn it on yourself, and «Check for updates» when you press it.",
   "settings.privacy.clips": "Last {n} copies",
   "settings.privacy.erase": "Erase",
   "settings.privacy.done": "Done",
@@ -632,6 +632,13 @@ export const en: Record<TKey, string> = {
   "settings.about.local": "100% local · no accounts · no tracking",
   "settings.about.os": "Runs on Windows 10 and 11",
   "settings.about.credits": "Built with Tauri {tauri} and React · Rubik font (OFL)",
+  "settings.about.update.check": "Check for updates",
+  "settings.about.update.checking": "Checking…",
+  "settings.about.update.note": "Asks GitHub only when you press it, and never downloads anything by itself",
+  "settings.about.update.latest": "You have the latest version",
+  "settings.about.update.found": "Version {v} is out",
+  "settings.about.update.open": "Open the download page",
+  "settings.about.update.failed": "Couldn't reach GitHub. Check your internet and try again",
 
   // phase 10 — first launch
   "tour.hello": "Hi! I'm NIMI, and this is Nuri.",

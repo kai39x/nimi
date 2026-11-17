@@ -1,6 +1,12 @@
 # Handoff — read this first when resuming
 
 ## Where we are (2026-11-17)
+- **Next: 1.1.0** (not released yet; `CHANGELOG.md` has its section). About → «تحقق من التحديثات»
+  (`src-tauri/src/update.rs`: one GitHub API call when pressed, opens only
+  `github.com/kai39x/nimi/releases/…`). `scripts/e2e.py` = real-input tests (tour, capsule, command
+  bar; 15 checks, all pass; proven to catch the 1.0.0 tour bug). `scripts/record-gif.py` = README
+  GIF. Release notes come from `CHANGELOG.md`. SignPath signing is wired in the workflow but waits
+  for Kai's application (`docs/SIGNING.md`). Dev builds no longer touch the autostart Run key.
 - **v1.0.1** (2026-11-17): the tour no longer opens the capsule when its buttons are clicked (the
   tour lives inside the capsule element; its root now stops click / pointerdown / contextmenu /
   wheel). Test UI with real mouse clicks (`scripts/dev/mouse.ps1`): CDP `.click()` has

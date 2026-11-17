@@ -614,7 +614,7 @@ export const ar = {
   "settings.soundFeed": "أصوات الأكل والفقاعات",
   "settings.muteFullscreen": "تسكت في ملء الشاشة",
   "settings.muteFullscreen.sub": "لما تلعب أو تشوف فيديو",
-  "settings.privacy.banner": "كل شي على جهازك. NIMI ما يتصل بالنت ولا يرسل أي بيانات — إلا قائمة OpenPhish لفحص الروابط إذا شغّلتها بنفسك.",
+  "settings.privacy.banner": "كل شي على جهازك. NIMI ما يتصل بالنت ولا يرسل أي بيانات — إلا قائمة OpenPhish لفحص الروابط إذا شغّلتها بنفسك، وزر «تحقق من التحديثات» لما تضغطه.",
   "settings.privacy.clips": "آخر {n} نسخة",
   "settings.privacy.erase": "امسح",
   "settings.privacy.done": "تم",
@@ -631,6 +631,13 @@ export const ar = {
   "settings.about.local": "محلي ١٠٠٪ · بدون حسابات · بدون تتبع",
   "settings.about.os": "يشتغل على ويندوز ١٠ و١١",
   "settings.about.credits": "مبني بـ Tauri {tauri} و React · خط Rubik (OFL)",
+  "settings.about.update.check": "تحقق من التحديثات",
+  "settings.about.update.checking": "أدوّر…",
+  "settings.about.update.note": "يسأل GitHub بس لما تضغط، وما ينزّل شي بنفسه",
+  "settings.about.update.latest": "عندك آخر نسخة",
+  "settings.about.update.found": "فيه نسخة جديدة {v}",
+  "settings.about.update.open": "افتح صفحة التحميل",
+  "settings.about.update.failed": "ما قدرت أوصل لـ GitHub، تأكد من النت وجرّب مرة ثانية",
 
   // phase 10 — first launch
   "tour.hello": "هلا! أنا NIMI، وهذا نوري.",
