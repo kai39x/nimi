@@ -10,7 +10,8 @@ Windows 10 / 11 · عربي + English · 100% offline
 
 [**⬇ تحميل · Download**](https://github.com/kai39x/nimi/releases/latest) &nbsp;·&nbsp; [العربية](#ar) &nbsp;·&nbsp; [English](#en)
 
-<img src="design/boards/02_Expressions.jpg" width="860" alt="NIMI's expressions" />
+<img src="docs/screenshots/capsule-music.png" width="440" alt="NIMI in his capsule, playing a song" />
+<img src="docs/screenshots/capsule-timer.png" width="283" alt="NIMI focused on a timer" />
 
 </div>
 
@@ -41,20 +42,22 @@ Windows 10 / 11 · عربي + English · 100% offline
 
 ### صور
 
-الصور من لوحات التصميم المعتمدة، والبرنامج مطابق لها شاشة شاشة.
+كل الصور لقطات حقيقية من البرنامج.
 
 <p align="center">
-<img src="design/boards/06_Compact.jpg" width="49%" alt="الكبسولة" />
-<img src="design/boards/08_Feed.jpg" width="49%" alt="الأكل" />
-<img src="design/boards/11_PanelHome.jpg" width="49%" alt="الرئيسية" />
-<img src="design/boards/12_PanelSystem.jpg" width="49%" alt="النظام" />
-<img src="design/boards/13_PanelShortcuts.jpg" width="49%" alt="الاختصارات" />
-<img src="design/boards/10_Command.jpg" width="49%" alt="شريط الأوامر" />
-<img src="design/boards/14_PanelNotifs.jpg" width="49%" alt="التنبيهات" />
-<img src="design/boards/15_PanelGames.jpg" width="49%" alt="الألعاب" />
+<img src="docs/screenshots/ar-home.png" width="49%" alt="الرئيسية" />
+<img src="docs/screenshots/ar-music.png" width="49%" alt="الأغنية" />
+<img src="docs/screenshots/ar-system.png" width="49%" alt="النظام" />
+<img src="docs/screenshots/ar-shortcuts.png" width="49%" alt="الاختصارات" />
+<img src="docs/screenshots/ar-notifications.png" width="49%" alt="التنبيهات" />
+<img src="docs/screenshots/ar-games.png" width="49%" alt="الألعاب" />
+<img src="docs/screenshots/ar-command.png" width="45%" alt="شريط الأوامر" />
+<img src="docs/screenshots/ar-settings.png" width="53%" alt="الإعدادات" />
 </p>
 
-<p align="center"><img src="docs/evidence/phase9-moon-toss.png" width="80%" alt="رمية القمر من البرنامج نفسه" /><br/><sub>رمية القمر، لقطة من البرنامج نفسه</sub></p>
+<p align="center"><img src="docs/screenshots/ar-feed.png" width="60%" alt="الأكل: اسحب ملف على نيمي" /><br/><sub>اسحب أي ملف على نيمي ويطلع لك وش يقدر يسوي فيه</sub></p>
+
+<p align="center"><img src="docs/evidence/phase9-moon-toss.png" width="80%" alt="رمية القمر" /><br/><sub>رمية القمر</sub></p>
 
 ### التحميل
 
@@ -99,7 +102,22 @@ Everything runs **on your PC** — no internet, no accounts, no tracking.
 | 🔔 **Notifications** | Drive almost full, PC under load, timer done, new download, USB in / out, internet lost — three levels and Do Not Disturb. |
 | 🎮 **Games** | Star Catch, Moon Toss and Expression Memory — each under two minutes. |
 
-The screenshots above are the approved design boards; the app follows them screen by screen.
+### Screenshots
+
+All real screenshots from the app.
+
+<p align="center">
+<img src="docs/screenshots/en-home.png" width="49%" alt="Home" />
+<img src="docs/screenshots/en-music.png" width="49%" alt="Music" />
+<img src="docs/screenshots/en-system.png" width="49%" alt="System" />
+<img src="docs/screenshots/en-shortcuts.png" width="49%" alt="Shortcuts" />
+<img src="docs/screenshots/en-notifications.png" width="49%" alt="Alerts" />
+<img src="docs/screenshots/en-games.png" width="49%" alt="Games" />
+<img src="docs/screenshots/en-command.png" width="45%" alt="Command bar" />
+<img src="docs/screenshots/en-settings.png" width="53%" alt="Settings" />
+</p>
+
+<p align="center"><img src="docs/screenshots/en-feed.png" width="60%" alt="Feeding: drop a file on NIMI" /><br/><sub>Drop any file on NIMI and he shows what he can do with it</sub></p>
 
 ### Download
 
