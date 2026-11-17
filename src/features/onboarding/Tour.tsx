@@ -125,8 +125,20 @@ export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
     </button>
   );
 
+  // The tour is rendered inside the capsule element: without this, every click on a tour button
+  // also reached the capsule's handlers (open the island, start a drag, the right-click menu).
+  const keep = (e: React.SyntheticEvent) => e.stopPropagation();
+
   return (
-    <div ref={root} className={`tour tour--${step}`}>
+    <div
+      ref={root}
+      className={`tour tour--${step}`}
+      onClick={keep}
+      onDoubleClick={keep}
+      onPointerDown={keep}
+      onContextMenu={keep}
+      onWheel={keep}
+    >
       {step === "star" && <span className="tour__star" aria-hidden="true" />}
 
       {step === "hello" && (

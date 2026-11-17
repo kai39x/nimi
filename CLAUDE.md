@@ -22,7 +22,7 @@ Tauri downloads NSIS into `%LOCALAPPDATA%\tauri` on the first `tauri build` (use
 
 ## Read first
 - `docs/HANDOFF.md` — **current state and what to do next** (short; read before anything else).
-- `PROMPT.md` — the brief and the 11 phases. Wait for Kai's OK between phases; commit at the end of each.
+- `PROMPT.md` (local only, not in the public repo) — the brief and the 11 phases. Wait for Kai's OK between phases; commit at the end of each.
 - `design/DESIGN_SPEC.md` — the contract. `design/boards/*.jpg` — the approved screens; look at the board before building its screen.
 - `design/character/nimi-reference.html`, `nimi_rig_generator.py`, `nimi.css` — the character. Port the geometry and keyframes; never redraw.
 - `docs/PLAN.md` — how the risky parts work (overlay window, click-through + drag-drop, SMTC).

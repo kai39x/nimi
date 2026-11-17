@@ -16,3 +16,10 @@ src-tauri/gen/schemas/
 # OS
 .DS_Store
 Thumbs.db
+
+# Kai's original brief and its guide: kept on his machine, not published
+PROMPT.md
+README_AR.md
+
+# Python
+__pycache__/
