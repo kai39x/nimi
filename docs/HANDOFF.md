@@ -1,11 +1,17 @@
 # Handoff — read this first when resuming
 
-## Where we are (2026-11-16)
+## Where we are (2026-11-17)
+- **v1.0.1** (2026-11-17): the tour no longer opens the capsule when its buttons are clicked (the
+  tour lives inside the capsule element; its root now stops click / pointerdown / contextmenu /
+  wheel). Test UI with real mouse clicks (`scripts/dev/mouse.ps1`): CDP `.click()` has
+  `detail = 0` and skips the capsule's open path. The setup exe has NIMI's icon (`installerIcon`),
+  the README uses real screenshots (`docs/screenshots/`), workflow actions are on v5. Kai confirmed
+  it runs on Windows 10. `PROMPT.md` / `README_AR.md` are local only (git-ignored).
+
+## Earlier (2026-11-16)
 - All 11 phases done. **v1.0.0 is published** (2026-11-16):
   https://github.com/kai39x/nimi/releases/tag/v1.0.0 — `NIMI_1.0.0_x64-setup.exe` (NSIS, per-user)
-  and `NIMI_1.0.0_portable.exe`, built by `.github/workflows/release.yml` from the tag. The
-  workflow warns that `actions/checkout@v4` / `setup-node@v4` run on Node 20 (deprecated): bump
-  them to v5 on the next release. Next releases: bump the version, push a new `v*` tag.
+  and `NIMI_1.0.0_portable.exe`, built by `.github/workflows/release.yml` from the tag.  Next releases: bump the version, push a new `v*` tag.
 
 ## Phase 10 — sounds, settings, first launch, release (spec §9–12, boards 05, 16, 17)
 - `lib/sounds.ts`: the 14 WAVs (`design/sounds/`), volume `soundVolume` (40 %), one sound at a
