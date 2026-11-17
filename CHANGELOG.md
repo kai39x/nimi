@@ -3,7 +3,7 @@
 Every release of NIMI. The release workflow copies a version's section into its GitHub Release
 notes, so each version is written here before it is tagged.
 
-## 1.1.0 — unreleased
+## 1.1.0 — 2026-11-17
 
 ### New
 - **Check for updates** in Settings → About. It asks GitHub for the latest version only when you
