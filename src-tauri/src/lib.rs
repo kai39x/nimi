@@ -141,6 +141,9 @@ pub fn run() {
             (window::SETTINGS_LABEL, WindowEvent::CloseRequested { api, .. }) => {
                 api.prevent_close();
                 let _ = win.hide();
+                if let Some(w) = win.app_handle().get_webview_window(window::SETTINGS_LABEL) {
+                    window::memory::set_low(&w, true);
+                }
             }
             // The color picker is shown and hidden, never destroyed.
             (tools::picker::PICKER_LABEL, WindowEvent::CloseRequested { api, .. }) => {
@@ -166,7 +169,11 @@ pub fn run() {
             tools::spawn(handle);
             notify::spawn(handle);
             for config in app.config().app.windows.clone() {
-                tauri::WebviewWindowBuilder::from_config(handle, &config)?.build()?;
+                let w = tauri::WebviewWindowBuilder::from_config(handle, &config)?.build()?;
+                // Settings and the color picker start hidden: keep them small until opened.
+                if w.label() != window::OVERLAY_LABEL {
+                    window::memory::set_low(&w, true);
+                }
             }
             window::setup(handle)?;
             tray::setup(handle)?;

@@ -22,8 +22,18 @@ impl SettingsStore {
         let path = dir.join("settings.json");
 
         let mut settings: Settings = match fs::read(&path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|err| {
-                log::warn!("settings.json is unreadable ({err}); starting from defaults");
+            // Editors (and PowerShell's `Out-File`) may add a UTF-8 BOM, which serde_json rejects.
+            Ok(bytes) => serde_json::from_slice(
+                bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes),
+            )
+            .unwrap_or_else(|err| {
+                // Keep the unreadable file: the first change would overwrite it otherwise.
+                let keep = path.with_extension("json.bad");
+                let _ = fs::copy(&path, &keep);
+                log::warn!(
+                    "settings.json is unreadable ({err}); kept as {} and starting from defaults",
+                    keep.display()
+                );
                 Settings::default()
             }),
             Err(_) => Settings::default(),

@@ -1,3 +1,4 @@
+import { ACTION_LABEL, recordMeal } from "./today";
 import { play, type SoundId } from "@/lib/sounds";
 import { useEffect, useSyncExternalStore } from "react";
 import { feedInfo, feedRun, feedUndo, focusOverlay, pocketAdd, setOverlayExpanded } from "@/ipc/commands";
@@ -196,6 +197,7 @@ export async function runAction(action: FeedAction, target: string | null = null
   mood("working");
   try {
     const result = await feedRun(action, state.paths, state.text, target);
+    recordMeal(state.paths.length, ACTION_LABEL[action]);
     set({ phase: "result", result });
     setMoodOverride("happy", 2200);
     if (state.bg) {
@@ -227,6 +229,7 @@ export async function toPocket(paths = state.paths) {
   if (!paths.length) return;
   clearTimers();
   await pocketAdd(paths);
+  recordMeal(paths.length, "feed.pocket");
   set({ phase: "pocketed", paths, result: null });
   setMoodOverride("happy", 1800);
   void setOverlayExpanded(true);

@@ -42,6 +42,9 @@ const TICK_HIDDEN: Duration = Duration::from_millis(400);
 pub struct DragSession {
     grab_cursor_x: i32,
     grab_window_x: i32,
+    /// Where this drag last put the window. Saved on release: the cached geometry only catches up
+    /// on the window's `Moved` event, which may not have arrived for the last step yet.
+    last_x: i32,
     moved: bool,
 }
 
@@ -118,6 +121,7 @@ pub fn begin_drag(app: &AppHandle) -> Result<(), String> {
     *st.drag.lock().expect("drag lock") = Some(DragSession {
         grab_cursor_x: cx,
         grab_window_x: geometry.x,
+        last_x: geometry.x,
         moved: false,
     });
     emit_drag(app, DragPhase::Start, false);
@@ -136,11 +140,10 @@ fn tick_drag(app: &AppHandle, st: &OverlayState, cursor_x: i32, button_down: boo
     };
 
     if !button_down {
-        let moved = session.moved;
+        let (moved, x) = (session.moved, session.last_x);
         *guard = None;
         drop(guard);
         if moved {
-            let x = st.geometry.lock().expect("geometry lock").x;
             placement::persist_offset(app, x);
         }
         emit_drag(app, DragPhase::End, moved);
@@ -154,6 +157,7 @@ fn tick_drag(app: &AppHandle, st: &OverlayState, cursor_x: i32, button_down: boo
     }
     if session.moved {
         let x = placement::clamp_x(app, session.grab_window_x + dx);
+        session.last_x = x;
         let y = st.geometry.lock().expect("geometry lock").y;
         if let Some(overlay) = app.get_webview_window(OVERLAY_LABEL) {
             let _ = overlay.set_position(PhysicalPosition::new(x, y));

@@ -73,6 +73,8 @@ windows = { version = "0.62", features = [
     "Web_Http_Headers",
 ] }
 tauri-plugin-log = "2"
+# WebView2 interfaces Tauri does not wrap (memory target of hidden windows). Same version as Tauri's.
+webview2-com = "0.39"
 lopdf = "0.42"
 pdf-extract = "0.12.1"
 webp = "0.3.1"

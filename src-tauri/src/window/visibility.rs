@@ -10,10 +10,7 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{hittest, state, OverlayState, OVERLAY_LABEL};
-use crate::{
-    ipc::{events, HideReason, OverlayVisibility, TrayState},
-    tray,
-};
+use crate::ipc::{events, HideReason, OverlayVisibility};
 
 fn desired(st: &OverlayState) -> OverlayVisibility {
     if st.fullscreen.load(Ordering::Relaxed) {
@@ -53,24 +50,20 @@ pub fn sync(app: &AppHandle) {
 
     if let Some(overlay) = app.get_webview_window(OVERLAY_LABEL) {
         let result = if next.visible {
+            super::memory::set_low(&overlay, false);
             overlay.show()
         } else {
             hittest::set_interactive(app, &st, false);
-            overlay.hide()
+            let hidden = overlay.hide();
+            super::memory::set_low(&overlay, true);
+            hidden
         };
         if let Err(err) = result {
             log::warn!("overlay show/hide failed: {err}");
         }
     }
 
-    tray::set_state(
-        app,
-        if next.reason == Some(HideReason::Timer) {
-            TrayState::Sleep
-        } else {
-            TrayState::Normal
-        },
-    );
+    crate::notify::sync_tray(app);
     let _ = app.emit(events::OVERLAY_VISIBILITY, &next);
 }
 

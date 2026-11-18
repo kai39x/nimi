@@ -11,6 +11,7 @@
 
 pub mod fullscreen;
 pub mod hittest;
+pub mod memory;
 pub mod placement;
 pub mod settings_window;
 pub mod subclass;

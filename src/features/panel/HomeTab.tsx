@@ -14,6 +14,7 @@ import { describe, levelOf, topUnread, useNotifications } from "@/features/notif
 import { shellActions } from "@/features/shell/actions";
 import { moodLabel, moodLevel } from "./moodLabels";
 import { useEnergy } from "./useEnergy";
+import { useToday } from "@/features/feed/today";
 
 function Bar({ value, tone }: { value: number; tone: "butter" | "rose" | "peri" | "mint" | "coral" }) {
   return (
@@ -33,10 +34,11 @@ export function HomeTab({ mood }: { mood: Mood }) {
   const lang: Lang = settings?.language ?? "ar";
   const sys = useSystem();
   const systemDrive = sys.stats?.drives.find((d) => d.system) ?? sys.stats?.drives[0] ?? null;
-  const energy = useEnergy(mood);
+  const energy = useEnergy();
   const days = settings?.firstRunMs ? daysBetween(settings.firstRunMs) : 0;
-  const meals = 0; // phase 6
-  const lastAction: string | null = null; // phase 6/7
+  const today = useToday();
+  const meals = today.meals;
+  const lastAction = today.last ? t(today.last) : null;
   const { main } = useTimers();
   const running = !!main && main.pausedLeftMs == null;
   const now = useClock(running);
@@ -76,7 +78,7 @@ export function HomeTab({ mood }: { mood: Mood }) {
           <span className="status__label">
             <Icon name="pocket" size={16} /> {t("home.meals")}
           </span>
-          <span className="status__value">{t("home.meals.count").replace("{n}", fmtNumber(meals, lang))}</span>
+          <span className="status__value">{meals === 1 ? t("home.meals.one") : meals === 2 ? t("home.meals.two") : t(meals >= 11 ? "home.meals.many" : "home.meals.count").replace("{n}", fmtNumber(meals, lang))}</span>
         </div>
         <Bar value={Math.min(1, meals / 10)} tone="peri" />
         <div className="status__last">{lastAction ? t("home.last").replace("{s}", lastAction) : t("home.last.none")}</div>

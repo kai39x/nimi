@@ -13,6 +13,7 @@ pub fn open(app: &AppHandle) -> tauri::Result<()> {
     if !window.is_visible()? {
         window.center()?;
     }
+    super::memory::set_low(&window, false);
     window.unminimize()?;
     window.show()?;
     window.set_focus()?;

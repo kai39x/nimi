@@ -63,6 +63,7 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
             let _ = SetWindowDisplayAffinity(HWND(h.0), WDA_EXCLUDEFROMCAPTURE);
         }
     }
+    crate::window::memory::set_low(&win, false);
     win.show().map_err(err)?;
     win.set_focus().map_err(err)?;
     let _ = win.emit("nimi://picker/open", ());
@@ -78,6 +79,7 @@ pub fn follow(app: &AppHandle) {
 pub fn close(app: &AppHandle, hex: Option<String>) {
     if let Some(win) = app.get_webview_window(PICKER_LABEL) {
         let _ = win.hide();
+        crate::window::memory::set_low(&win, true);
     }
     let _ = app.emit(events::PICKER_DONE, hex);
 }

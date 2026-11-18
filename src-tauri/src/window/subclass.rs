@@ -83,10 +83,13 @@ unsafe extern "system" fn subclass_proc(
         WM_DISPLAYCHANGE => schedule_replace(),
         // USB drives in / out (the overlay is a top-level window, so it gets the broadcast).
         WM_DEVICECHANGE => crate::notify::watch::on_device_change(wparam.0, lparam.0),
+        // Windows resizes the window by the DPI ratio right after this message; once that is
+        // done, put it back at its real size and centered position (placement::place).
         WM_DPICHANGED => {
             if let Some(app) = APP.get() {
                 refresh_geometry(app);
             }
+            schedule_replace();
         }
         WM_SETTINGCHANGE if lparam.0 != 0 => {
             // SAFETY: for WM_SETTINGCHANGE a non-null lParam is a NUL-terminated wide string.

@@ -3,6 +3,30 @@
 Every release of NIMI. The release workflow copies a version's section into its GitHub Release
 notes, so each version is written here before it is tagged.
 
+## 1.1.1 — unreleased
+
+### Fixed
+- NIMI could sit off-center, and double-click («back to the middle») put him in the same wrong
+  place. When Windows changed the display scale while NIMI was running (for example right after
+  logging in), it enlarged his window and nothing shrank it back. His window now always keeps
+  its real size, and goes back to it after any scale or display change.
+- «الطاقة» on Home was stuck at 10 %: it only counted while Home was open and treated every gap
+  (nights included) as awake time. It now runs all the time; sleep and time away refill it.
+- «أكلات اليوم» and «آخر شي سواه» on Home now show what he really ate and did today (they were
+  never filled in), with the right Arabic for one, two and many files.
+- The tray icon lost «لا تزعجني» or the unread dot after NIMI came back from hiding behind a
+  fullscreen game or video.
+- Dragging NIMI could save a position a few pixels off from where he was let go.
+- A settings file saved by an editor with a BOM (or otherwise unreadable) made NIMI start from
+  defaults and then overwrite it. It is read now, and a broken one is kept as
+  `settings.json.bad` instead of being lost.
+- Notifications older than a week are removed while NIMI runs, not only at the next start.
+
+### Faster and lighter
+- Less RAM: the settings and color-picker windows, hidden almost all the time, now ask WebView2
+  to keep their memory low until they are opened (about 55 MB less on a fresh start, measured).
+  The fixed window size also cuts graphics memory on PCs that hit the scaling bug.
+
 ## 1.1.0 — 2026-11-17
 
 ### New

@@ -102,6 +102,9 @@ pub fn push(app: &AppHandle, mut n: Notification) {
         let mut list = sh.list.lock().expect("notify lock");
         n.id = list.iter().map(|x| x.id).max().unwrap_or(0) + 1;
         list.insert(0, n.clone());
+        // Week-old ones go now too, not only at the next start (NIMI may run for weeks).
+        let cutoff = n.at_ms - KEEP_MS;
+        list.retain(|x| x.at_ms >= cutoff);
         list.truncate(KEEP);
     }
     log::info!("notify: {kind:?} {:?}", n.name);
@@ -134,15 +137,25 @@ fn changed(app: &AppHandle) {
     sync_tray(app);
 }
 
-/// Tray icon: «لا تزعجني» beats the unread dot.
+/// The one place that picks the tray icon, from everything that affects it: hidden for a while
+/// (sleeping NIMI) beats «لا تزعجني», which beats the unread dot. Every input calls this, so
+/// one of them can no longer reset another's icon (showing again after a fullscreen game used
+/// to drop the DND / unread icon).
 pub fn sync_tray(app: &AppHandle) {
+    let hidden_for_a_while = app
+        .try_state::<Arc<crate::window::OverlayState>>()
+        .is_some_and(|st| {
+            crate::window::visibility::current(&st).reason == Some(crate::ipc::HideReason::Timer)
+        });
     let dnd = app.state::<SettingsStore>().get().dnd;
     let unread = app
         .try_state::<Arc<NotifyShared>>()
         .is_some_and(|sh| sh.list.lock().expect("notify lock").iter().any(|n| !n.read));
     crate::tray::set_state(
         app,
-        if dnd {
+        if hidden_for_a_while {
+            TrayState::Sleep
+        } else if dnd {
             TrayState::Dnd
         } else if unread {
             TrayState::Notify

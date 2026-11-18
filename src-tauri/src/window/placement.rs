@@ -1,7 +1,7 @@
 //! Where the overlay lives: the chosen monitor's top edge, horizontally centered plus a
 //! per-monitor offset the user set by dragging. All math is in physical pixels.
 
-use tauri::{AppHandle, Manager, Monitor, PhysicalPosition};
+use tauri::{AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize};
 
 use super::{refresh_geometry, CAPSULE_WIDTH, OVERLAY_LABEL, OVERLAY_SIZE};
 use crate::{
@@ -57,7 +57,12 @@ fn x_bounds(monitor: &Monitor) -> (i32, i32) {
     (min, max.max(min))
 }
 
-/// Moves the overlay to its resting place on the target monitor.
+/// Moves the overlay to its resting place on the target monitor, at its exact size.
+///
+/// The size matters: when Windows changes the display scale while NIMI runs (e.g. 125 % → 200 %
+/// right after login, with autostart), it grows the window by the DPI ratio. The page centers the
+/// capsule in whatever width it gets, while the math here assumes `OVERLAY_SIZE`, so a 1.6× window
+/// put NIMI 288 logical px right of the center and double-click «recenter» kept him there.
 pub fn place(app: &AppHandle) -> tauri::Result<()> {
     let overlay = app
         .get_webview_window(OVERLAY_LABEL)
@@ -65,6 +70,21 @@ pub fn place(app: &AppHandle) -> tauri::Result<()> {
     let Some(monitor) = target_monitor(app)? else {
         return Ok(());
     };
+
+    let scale = monitor.scale_factor();
+    let want = PhysicalSize::new(
+        window_width_px(scale) as u32,
+        (OVERLAY_SIZE.1 * scale).round() as u32,
+    );
+    if overlay.outer_size()? != want {
+        log::info!(
+            "overlay was {:?}, restoring {}x{} at scale {scale}",
+            overlay.outer_size()?,
+            want.width,
+            want.height
+        );
+        overlay.set_size(want)?;
+    }
 
     let offset = app
         .state::<SettingsStore>()

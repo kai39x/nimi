@@ -2457,6 +2457,7 @@ dependencies = [
  "ts-rs",
  "url",
  "webp",
+ "webview2-com",
  "windows",
  "windows-core",
 ]

@@ -30,6 +30,7 @@ import { play, preloadSounds } from "@/lib/sounds";
 import { CapsuleMenu, CapsulePill } from "./CapsuleMenu";
 import { CAPSULE_TOP, COMMAND_NIMI_SIZE, DEFAULT_NIMI_SIZE, FEED_NIMI_CENTER, FEED_NIMI_SIZE, ISLAND_NIMI_SIZE, PANEL_NIMI_SIZE, PANEL_TOP } from "./constants";
 import { usePeek } from "./usePeek";
+import { useEnergyClock } from "@/features/panel/useEnergy";
 import "./shell.css";
 
 /** Time to wait for a second click before treating a click as a single click. */
@@ -89,6 +90,7 @@ export function Shell() {
     sleepAfterMin: settings?.sleepAfterMin ?? 10,
     nimi: nimiRef,
   });
+  useEnergyClock(mood);
 
   // Sounds (spec §11): load once; he yawns into sleep and wakes with a chime.
   useEffect(() => preloadSounds(), []);
