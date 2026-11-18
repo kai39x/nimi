@@ -1,6 +1,17 @@
 # Handoff — read this first when resuming
 
-## Where we are (2026-11-17)
+## Where we are (2026-11-18)
+- **1.2.0** (to release): other apps' notifications (`notify/apps.rs`, polls
+  `UserNotificationListener` every 1.5 s; its change event is refused to unpackaged apps; App
+  notifications are never saved), tour step «إشعارات البرامج», self-update (`tauri-plugin-updater`,
+  pubkey in tauri.conf.json, private key at `%USERPROFILE%\.tauri\nimi-updater.key`; the workflow writes `latest.json` + `.sig`
+  when the `TAURI_SIGNING_PRIVATE_KEY` secret exists). Tested: a tampered installer is refused
+  ("signature verification failed"); a good one installs 1.2.0 and NIMI restarts by itself.
+  Dev-only test switch: `NIMI_UPDATE_ENDPOINT=http://…/latest.json`.
+- 1.1.1: off-center after a DPI change (place() restores the size), Home energy / meals, tray
+  state, drag offset, settings BOM, lower RAM (`window/memory.rs`).
+
+## 2026-11-17
 - **Next: 1.1.0** (not released yet; `CHANGELOG.md` has its section). About → «تحقق من التحديثات»
   (`src-tauri/src/update.rs`: one GitHub API call when pressed, opens only
   `github.com/kai39x/nimi/releases/…`). `scripts/e2e.py` = real-input tests (tour, capsule, command

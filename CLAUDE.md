@@ -1,6 +1,6 @@
 # NIMI — notes for Claude Code
 
-Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI. Two exceptions Kai asked for: the daily OpenPhish list download for link checks (opt-in, off by default; links never leave the PC), and About → «تحقق من التحديثات», which asks the GitHub API for the latest release only when pressed (`src-tauri/src/update.rs`; never downloads or installs).
+Windows desktop companion: **Tauri 2 (Rust) + React 19 + TypeScript + Vite**. Offline only. No cloud, no telemetry, no AI. Exceptions Kai asked for: the daily OpenPhish list download for link checks (opt-in, off by default; links never leave the PC), About → «تحقق من التحديثات» / «حدّث الحين» (`src-tauri/src/update.rs`: the GitHub API when pressed; the signed installer through tauri-plugin-updater only on «حدّث الحين»), and reading other apps' toasts from Windows when «إشعارات البرامج» is on (`src-tauri/src/notify/apps.rs`, local only, kept in memory).
 Talk to Kai in Arabic (casual). Code, comments and commit messages in English.
 
 ## Commands

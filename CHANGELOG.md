@@ -3,6 +3,19 @@
 Every release of NIMI. The release workflow copies a version's section into its GitHub Release
 notes, so each version is written here before it is tagged.
 
+## 1.2.0 — unreleased
+
+### New
+- **Other apps' notifications in NIMI** (WhatsApp, Teams, mail…): turn on «إشعارات البرامج» in
+  Settings → Notifications (or say yes in the tour) and NIMI shows them in his capsule and his
+  list, with the app's icon; «افتح» opens the app. The messages are kept in memory only, never
+  saved. Windows still shows its own pop-ups unless its «Do not disturb» is on; NIMI keeps getting
+  them either way, and both places have a button to that Windows page.
+- The first-launch tour asks whether NIMI should show your apps' notifications.
+- **Update now**: when «تحقق من التحديثات» finds a newer version, «حدّث الحين» downloads it,
+  checks its signature against NIMI's own key (a changed file is refused), installs it and starts
+  NIMI again. Only when you press it. This works from 1.2.0 on: 1.1.x still uses the download page.
+
 ## 1.1.1 — 2026-11-18
 
 ### Fixed

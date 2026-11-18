@@ -38,7 +38,7 @@
 | 💻 **النظام** | المعالج والرام وكرت الشاشة، مساحة كل قرص، أكبر الملفات، و«تسريع» يقفل بس البرامج اللي تختارها. |
 | ⚡ **الاختصارات** | لقطة شاشة، مؤقت وبومودورو، لاقط ألوان، سجل الحافظة، كتم المايك، قفل الجهاز، برامجك المفضلة واختصاراتك الخاصة. |
 | ⌨️ **شريط الأوامر** | اضغط Ctrl مرتين واكتب بالعربي أو الإنجليزي: `مؤقت 25`، `ذكرني 10 اشرب موية`، `= 128 * 3.5`، `10 km to mi`، `افتح`، `دوّر`. |
-| 🔔 **التنبيهات** | يقولك إذا القرص قرب يمتلي، أو جهازك مضغوط، أو خلص المؤقت، أو نزل ملف، أو انوصل فلاش، أو انقطع النت. ثلاث درجات و«لا تزعجني». |
+| 🔔 **التنبيهات** | يقولك إذا القرص قرب يمتلي، أو جهازك مضغوط، أو خلص المؤقت، أو نزل ملف، أو انوصل فلاش، أو انقطع النت. ويعرض لك إشعارات برامجك (واتساب وغيره) إذا شغّلتها. ثلاث درجات و«لا تزعجني». |
 | 🎮 **الألعاب** | صيد النجوم، رمية القمر، وذاكرة التعابير. كل لعبة أقل من دقيقتين. |
 
 ### صور
@@ -76,7 +76,8 @@
 - كل شي محلي: ما فيه حسابات، ولا تتبع، ولا ذكاء اصطناعي، ولا يرسل أي بيانات.
 - يستخدم النت في حالتين بس:
   - قائمة OpenPhish لفحص الروابط، وهي مطفية من البداية. تنزل مرة باليوم إذا شغّلتها، والفحص كله يصير على جهازك.
-  - زر «تحقق من التحديثات» في «حول»: يسأل GitHub عن آخر نسخة لما تضغطه بس، وما ينزّل شي بنفسه.
+  - زر «تحقق من التحديثات» في «حول»: يسأل GitHub عن آخر نسخة لما تضغطه بس. وإذا ضغطت «حدّث الحين» ينزّل النسخة الجديدة، ويتأكد من توقيعها، ويثبّتها.
+- إشعارات البرامج (إذا شغّلتها) يقراها من ويندوز على جهازك، وتظل في الذاكرة بس وما تنحفظ.
 - سجل الحافظة في الذاكرة بس، وينمسح لما تقفل نيمي. كلمات السر من مدير كلمات السر ما تنحفظ.
 - الحذف دايم يروح لسلة المحذوفات.
 
@@ -102,7 +103,7 @@ Everything runs **on your PC** — no accounts, no tracking, and offline except 
 | 💻 **System** | CPU, RAM and GPU, every drive's free space, your largest files, and a Boost that only closes the apps you tick. |
 | ⚡ **Shortcuts** | Screenshot, timer & Pomodoro, color picker, clipboard history, mute mic, lock PC, favorite apps and your own shortcuts. |
 | ⌨️ **Command bar** | Tap Ctrl twice and type in English or Arabic: `timer 25`, `remind 10 drink water`, `= 128 * 3.5`, `10 km to mi`, `open`, `find`. |
-| 🔔 **Notifications** | Drive almost full, PC under load, timer done, new download, USB in / out, internet lost — three levels and Do Not Disturb. |
+| 🔔 **Notifications** | Drive almost full, PC under load, timer done, new download, USB in / out, internet lost — and, if you turn it on, your other apps' notifications (WhatsApp…). Three levels and Do Not Disturb. |
 | 🎮 **Games** | Star Catch, Moon Toss and Expression Memory — each under two minutes. |
 
 ### Screenshots
@@ -138,7 +139,8 @@ Requires Windows 10 or 11. On first launch NIMI introduces himself in a tour tha
 - Fully local: no accounts, no telemetry, no AI, no data sent anywhere.
 - It goes online in only two cases:
   - The OpenPhish phishing list for link checks: off by default, downloaded once a day when on, and matched on your PC.
-  - **Check for updates** in About: asks GitHub for the latest version only when you press it, and never downloads anything by itself.
+  - **Check for updates** in About: asks GitHub for the latest version only when you press it; **Update now** then downloads it, checks its signature and installs it.
+- Other apps' notifications (if you turn them on) are read from Windows on your PC and kept in memory only, never saved.
 - Clipboard history lives in memory only and is gone when NIMI quits; password-manager copies are never kept.
 - Deleting always goes to the Recycle Bin.
 

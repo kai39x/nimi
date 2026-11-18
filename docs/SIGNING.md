@@ -1,3 +1,16 @@
+# Signing
+
+Two different signatures:
+
+- **Updater signature** (minisign, Tauri's updater): lets an installed NIMI accept an update from
+  «حدّث الحين». The public key is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`); the
+  private key is **only** on Kai's PC: `%USERPROFILE%\.tauri\nimi-updater.key` (no password). Keep a backup copy somewhere safe:
+  without it, no future release can update installed copies. The release workflow signs the final
+  installer with it when the repository secret `TAURI_SIGNING_PRIVATE_KEY` holds the key file's
+  content, and publishes `latest.json`, which installed copies read from
+  `releases/latest/download/latest.json`.
+- **Code signing** (Authenticode, SignPath, below): removes the "Windows protected your PC" warning.
+
 # Code signing (SignPath Foundation)
 
 Unsigned exe files make Windows show "Windows protected your PC". SignPath Foundation signs open

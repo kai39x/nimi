@@ -77,7 +77,7 @@ pub async fn install(app: AppHandle) -> Result<(), String> {
                     UpdateProgress { downloaded, total },
                 );
             },
-            || log::info!("update: verified, starting the installer"),
+            || log::info!("update: downloaded, checking the signature"),
         )
         .await
         .map_err(|e| e.to_string())
