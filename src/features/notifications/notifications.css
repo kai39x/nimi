@@ -274,3 +274,10 @@
     transform: none;
   }
 }
+
+/* Another app's logo (WhatsApp…) in place of the icon. */
+.nt-row__img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}

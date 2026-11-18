@@ -40,7 +40,7 @@ function Row({ n, lang }: { n: Notification; lang: Lang }) {
     <li className={`nt-row nt-row--${level}` + (n.read ? "" : " is-unread")}>
       <span className="nt-row__dot" aria-hidden="true" />
       <span className="nt-row__icon">
-        <Icon name={d.icon} size={18} />
+        {d.image ? <img className="nt-row__img" src={d.image} alt="" draggable={false} /> : <Icon name={d.icon} size={18} />}
       </span>
       <span className="nt-row__text">
         <span className="nt-row__title">{d.title}</span>

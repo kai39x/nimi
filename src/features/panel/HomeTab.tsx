@@ -153,7 +153,7 @@ export function HomeTab({ mood }: { mood: Mood }) {
           return (
             <button type="button" className="card alert" onClick={() => shellActions.openTab("notifications")}>
               <span className={`alert__icon alert__icon--${levelOf(top)}`}>
-                <Icon name={d.icon} size={16} />
+                {d.image ? <img className="alert__img" src={d.image} alt="" draggable={false} /> : <Icon name={d.icon} size={16} />}
               </span>
               <span className="alert__text">
                 {d.title} · {d.capsuleSub.split(" · ")[0]}

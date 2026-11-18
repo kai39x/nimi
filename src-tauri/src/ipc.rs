@@ -54,6 +54,8 @@ pub mod events {
     pub const NOTIFY_NEW: &str = "nimi://notify/new";
     /// `Vec<Notification>` after any change (newest first).
     pub const NOTIFY_LIST: &str = "nimi://notify/list";
+    /// `UpdateProgress` while «حدّث الحين» downloads the installer.
+    pub const UPDATE_PROGRESS: &str = "nimi://update/progress";
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -88,6 +90,24 @@ pub struct UpdateInfo {
     pub newer: bool,
     /// The release page to open (always under github.com/kai39x/nimi/releases/).
     pub url: String,
+}
+
+/// «حدّث الحين» download progress.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateProgress {
+    #[ts(type = "number")]
+    pub downloaded: u64,
+    #[ts(type = "number | null")]
+    pub total: Option<u64>,
+}
+
+/// «حدّث الحين»: downloads the newer release, checks its signature and installs it. NIMI closes
+/// while the installer runs and starts again afterwards.
+#[tauri::command]
+pub async fn update_install(app: AppHandle) -> Result<(), String> {
+    crate::update::install(app).await
 }
 
 /// Asks GitHub for the latest release — only when the user presses the button.
@@ -1594,6 +1614,9 @@ pub enum NotifyKind {
     BatteryLow,
     PowerIn,
     PowerOut,
+    /// Another app's notification (WhatsApp, Teams…), read through Windows' notification
+    /// listener when «إشعارات البرامج» is on. Kept in memory only, never written to disk.
+    App,
 }
 
 /// One notification. Rust sends facts (`kind` + data); the frontend writes the sentence.
@@ -1621,6 +1644,11 @@ pub struct Notification {
     pub percent: Option<f64>,
     pub round: Option<u32>,
     pub rounds: Option<u32>,
+    /// `App` notifications: the sender / headline and the message lines.
+    pub title: Option<String>,
+    pub body: Option<String>,
+    /// `App` notifications: the app's logo as a `data:` URL.
+    pub icon: Option<String>,
 }
 
 /// «كم يتكلم» (board 16): صامت · قليل · ثرثار.
@@ -1657,6 +1685,8 @@ pub struct NotifyWatch {
     pub usb: bool,
     pub network: bool,
     pub battery: bool,
+    /// Show other apps' notifications (off until the user turns it on: tour or settings).
+    pub apps: bool,
 }
 
 impl Default for NotifyWatch {
@@ -1669,8 +1699,17 @@ impl Default for NotifyWatch {
             usb: true,
             network: true,
             battery: true,
+            apps: false,
         }
     }
+}
+
+/// Whether Windows lets NIMI read other apps' notifications: "allowed", "denied" or "unspecified".
+#[tauri::command]
+pub async fn app_notify_access() -> String {
+    tauri::async_runtime::spawn_blocking(|| crate::notify::apps::access().to_string())
+        .await
+        .unwrap_or_else(|_| "unspecified".into())
 }
 
 #[tauri::command]

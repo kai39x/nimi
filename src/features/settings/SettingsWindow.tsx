@@ -4,7 +4,7 @@ import nimiIdle from "@design/character/svg/nimi_idle.svg";
 import { Icon, type IconName } from "@/components/Icon";
 import { Segmented, Slider, Toggle } from "@/components/controls";
 import { useT, type TKey } from "@/i18n";
-import { appInfo, clipClear, clipList, listMonitors, pickScreenshotFolder, screenshotDefaultFolder } from "@/ipc/commands";
+import { appInfo, appNotifyAccess, clipClear, clipList, listMonitors, openSettingsPage, pickScreenshotFolder, screenshotDefaultFolder } from "@/ipc/commands";
 import type { AppInfo } from "@/ipc/generated/AppInfo";
 import { play } from "@/lib/sounds";
 import { fmtNumber } from "@/lib/format";
@@ -83,12 +83,17 @@ export function SettingsWindow() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [clips, setClips] = useState(0);
   const [done, setDone] = useState<string | null>(null);
+  const [appAccess, setAppAccess] = useState<string | null>(null);
   useEffect(() => void appInfo().then(setInfo), []);
   useEffect(() => {
     if (section === "privacy") void clipList().then((l) => setClips(l.length));
     setDone(null);
   }, [section]);
   useEffect(() => void screenshotDefaultFolder().then(setShotDefault), []);
+  const appsOn = settings?.notifyWatch.apps ?? false;
+  useEffect(() => {
+    if (section === "notifications" && appsOn) void appNotifyAccess().then(setAppAccess);
+  }, [section, appsOn]);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
 
   useEffect(() => {
@@ -409,6 +414,27 @@ export function SettingsWindow() {
                   />
                 </Row>
               ))}
+              <Row title={t("settings.watch.apps")} sub={t("settings.watch.apps.sub")}>
+                <Toggle
+                  label={t("settings.watch.apps")}
+                  checked={settings.notifyWatch.apps}
+                  onChange={(apps) => void updateSettings({ notifyWatch: { ...settings.notifyWatch, apps } })}
+                />
+              </Row>
+              {settings.notifyWatch.apps && (
+                <div className="row__buttons settings__apps">
+                  {appAccess === "denied" && <p className="settings__warn">{t("settings.watch.apps.denied")}</p>}
+                  {appAccess === "denied" ? (
+                    <button type="button" className="btn-ghost" onClick={() => void openSettingsPage("ms-settings:privacy-notifications")}>
+                      {t("settings.watch.apps.allow")}
+                    </button>
+                  ) : (
+                    <button type="button" className="btn-ghost" onClick={() => void openSettingsPage("ms-settings:notifications")}>
+                      {t("settings.watch.apps.quiet")}
+                    </button>
+                  )}
+                </div>
+              )}
             </section>
           )}
 

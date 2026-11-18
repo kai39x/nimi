@@ -354,3 +354,21 @@
 .update__found {
   color: var(--n-butter);
 }
+
+/* «إشعارات البرامج»: the Windows settings button under the switch, and a warning when blocked. */
+.settings__apps {
+  flex-wrap: wrap;
+  margin: 2px 0 var(--n-s3);
+}
+
+.settings__warn {
+  flex-basis: 100%;
+  margin: 0 0 6px;
+  font-size: var(--n-fs-caption);
+  color: var(--n-warn);
+}
+
+.update__row {
+  display: inline-flex;
+  gap: 8px;
+}

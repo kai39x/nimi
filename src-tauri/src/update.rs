@@ -1,8 +1,11 @@
-//! Manual update check (About → «تحقق من التحديثات»). NIMI stays offline: this asks GitHub for
-//! the latest release only when the button is pressed, and never downloads or installs anything —
-//! a newer version just offers a link to the releases page.
+//! Updates, only when the user asks (About). «تحقق من التحديثات» asks GitHub for the latest
+//! release; «حدّث الحين» downloads it through Tauri's updater, which refuses any installer whose
+//! minisign signature does not match the public key in `tauri.conf.json` (the private key signs
+//! releases in CI, `docs/SIGNING.md`), then runs the NSIS installer. Nothing happens on its own.
 
-use crate::ipc::UpdateInfo;
+use tauri::{AppHandle, Emitter};
+
+use crate::ipc::{events, UpdateInfo, UpdateProgress};
 
 const LATEST_API: &str = "https://api.github.com/repos/kai39x/nimi/releases/latest";
 /// Pages the «صفحة التحميل» button may open.
@@ -36,6 +39,48 @@ pub fn open_page(url: &str) -> Result<(), String> {
         return Err("not a NIMI release page".into());
     }
     crate::files::shell::open_url(url).map_err(|e| e.message().to_string())
+}
+
+/// Downloads, verifies and installs the latest release. On Windows the app exits while the
+/// installer runs (passive mode: a progress window, no questions).
+pub async fn install(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let mut builder = app.updater_builder();
+    // Dev builds only: try the whole flow against a local `latest.json`. The signature check still
+    // applies; release builds have no such switch.
+    if cfg!(debug_assertions) {
+        if let Ok(endpoint) = std::env::var("NIMI_UPDATE_ENDPOINT") {
+            let url = endpoint
+                .parse()
+                .map_err(|e: url::ParseError| e.to_string())?;
+            builder = builder
+                .endpoints(vec![url])
+                .map_err(|e| e.to_string())?
+                .version_comparator(|_, _| true);
+        }
+    }
+    let updater = builder.build().map_err(|e| e.to_string())?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("no-update")?;
+    log::info!("update: downloading {}", update.version);
+    let progress = app.clone();
+    let mut downloaded = 0u64;
+    update
+        .download_and_install(
+            move |chunk, total| {
+                downloaded += chunk as u64;
+                let _ = progress.emit(
+                    events::UPDATE_PROGRESS,
+                    UpdateProgress { downloaded, total },
+                );
+            },
+            || log::info!("update: verified, starting the installer"),
+        )
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// "1.0.12" → [1, 0, 12]; anything after a `-` (pre-release) is ignored.

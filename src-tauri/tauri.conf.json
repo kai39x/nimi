@@ -68,6 +68,17 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5NDA2MjcyQUIzOEJFQzQKUldURXZqaXJjbUpBcVF2d1hhYkVEcDl1Zkc0TmdQaS90Y0V5bFJ1cnluWjhxYVdYQkp5Z1h2R2cK",
+      "endpoints": [
+        "https://github.com/kai39x/nimi/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": [

@@ -3,6 +3,7 @@ import { Icon } from "@/components/Icon";
 import { Toggle } from "@/components/controls";
 import { useT } from "@/i18n";
 import { Events, onEvent } from "@/ipc/events";
+import { openSettingsPage } from "@/ipc/commands";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { play } from "@/lib/sounds";
 import { setMoodOverride } from "@/features/character/useNimiMood";
@@ -10,8 +11,8 @@ import { useHitRect } from "@/features/overlay/hitRects";
 import { useFeed } from "@/features/feed/feed";
 import "./tour.css";
 
-type Step = "star" | "hello" | "language" | "feed" | "ctrl" | "home";
-const ORDER: Step[] = ["star", "hello", "language", "feed", "ctrl", "home"];
+type Step = "star" | "hello" | "language" | "feed" | "ctrl" | "apps" | "home";
+const ORDER: Step[] = ["star", "hello", "language", "feed", "ctrl", "apps", "home"];
 
 /** The tour steps aside while the command bar (or a feeding) is open: remember where it was. */
 let savedStep: Step = "star";
@@ -19,7 +20,9 @@ let savedStep: Step = "star";
 /**
  * First launch (spec §10, board 17): under a minute, «تخطي» at every step, no windows — only
  * NIMI's bubbles. A star falls and wakes him; he says hello, asks the language, lets you feed him
- * a demo file, teaches double Ctrl, then settles into the capsule with «شغّلني مع ويندوز».
+ * a demo file, teaches double Ctrl, asks whether he should show other apps' notifications (and
+ * points at Windows' «Do not disturb» so they don't pop up twice), then settles into the capsule
+ * with «شغّلني مع ويندوز».
  * Saved as done; «الخصوصية ← الجولة التعريفية» shows it again.
  */
 export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
@@ -36,6 +39,8 @@ export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
   /** A real file was fed during the feed step (the demo has its own path). */
   const [ate, setAte] = useState(false);
   const [demoAte, setDemoAte] = useState(false);
+  /** «إيه» on the notifications step: show the Windows hint before moving on. */
+  const [appsYes, setAppsYes] = useState(false);
   useHitRect(root, "tour");
 
   const next = () => setStep((s) => ORDER[Math.min(ORDER.length - 1, ORDER.indexOf(s) + 1)]);
@@ -62,6 +67,7 @@ export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
     }
     if (step === "feed") setMoodOverride("curious", 60_000);
     if (step === "ctrl") setMoodOverride("attention", 60_000);
+    if (step === "apps") setMoodOverride("curious", 60_000);
     if (step === "home") setMoodOverride("happy", 3000);
   }, [step]);
 
@@ -83,8 +89,8 @@ export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
     () =>
       onEvent(Events.commandOpen, () => {
         // The bar opens and this unmounts: move the saved step on right away.
-        if (savedStep === "ctrl") savedStep = "home";
-        setStep((s) => (s === "ctrl" ? "home" : s));
+        if (savedStep === "ctrl") savedStep = "apps";
+        setStep((s) => (s === "ctrl" ? "apps" : s));
       }),
     [],
   );
@@ -204,6 +210,41 @@ export function Tour({ nimi }: { nimi: () => DOMRect | null }) {
           <button type="button" className="tour__skip" onClick={next}>
             {t("tour.skipStep")}
           </button>
+        </div>
+      )}
+
+      {step === "apps" && (
+        <div className="tour__bubble n-glass">
+          <div className="tour__text">{appsYes ? t("tour.apps.quiet") : t("tour.apps")}</div>
+          <div className="tour__row">
+            {appsYes ? (
+              <>
+                <button type="button" className="chip tour__btn" onClick={() => void openSettingsPage("ms-settings:notifications")}>
+                  {t("tour.apps.open")}
+                </button>
+                <button type="button" className="chip chip--butter tour__btn is-on tour__apps-next" onClick={next}>
+                  {t("tour.next")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="chip chip--butter tour__btn is-on tour__apps-yes"
+                  onClick={() => {
+                    if (settings) void updateSettings({ notifyWatch: { ...settings.notifyWatch, apps: true } });
+                    setAppsYes(true);
+                  }}
+                >
+                  {t("tour.apps.yes")}
+                </button>
+                <button type="button" className="chip tour__btn tour__apps-no" onClick={next}>
+                  {t("tour.apps.no")}
+                </button>
+              </>
+            )}
+          </div>
+          {skip}
         </div>
       )}
 

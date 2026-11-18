@@ -39,6 +39,7 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec!["--autostart"]),
         ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -51,6 +52,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             ipc::app_info,
             ipc::check_update,
+            ipc::update_install,
             ipc::open_update_page,
             ipc::get_settings,
             ipc::set_settings,
@@ -120,6 +122,7 @@ pub fn run() {
             ipc::pick_screenshot_folder,
             ipc::screenshot_default_folder,
             ipc::notify_list,
+            ipc::app_notify_access,
             ipc::notify_dismiss,
             ipc::notify_clear,
             ipc::notify_read_all,

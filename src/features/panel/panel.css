@@ -466,3 +466,9 @@ button.card.alert {
 .home.home--no-status {
   grid-template-columns: 1fr;
 }
+
+.alert__img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}

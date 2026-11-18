@@ -237,9 +237,19 @@ def suite_tour(ov, original):
         click(ov.at(".tour__bubble .tour__skip"))
 
     click(ov.at(".tour__bubble .tour__skip"))
-    ov.wait("!!document.querySelector('.tour--home')", 3, "the last step")
+    ov.wait("!!document.querySelector('.tour--apps')", 3, "the notifications step")
     ok, cls = capsule_closed(ov)
     check("«skip» on the Ctrl step moves on and leaves the capsule closed", ok, cls)
+
+    # «إيه» turns on other apps' notifications and shows the Windows hint; «التالي» moves on.
+    click(ov.at(".tour__apps-yes"))
+    time.sleep(0.6)
+    on = ov.invoke("get_settings")["notifyWatch"]["apps"]
+    hint = ov.js("!!document.querySelector('.tour__apps-next')")
+    click(ov.at(".tour__apps-next"))
+    ov.wait("!!document.querySelector('.tour--home')", 3, "the last step")
+    ok, cls = capsule_closed(ov)
+    check("«إيه» on the notifications step turns them on, then moves on", on and hint and ok, cls)
 
     before = ov.invoke("get_settings")["autostart"]
     sw = ov.at(".tour__auto [role=switch]")

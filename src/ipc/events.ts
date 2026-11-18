@@ -25,6 +25,7 @@ export const Events = {
   screenshotSaved: "nimi://screenshot/saved",
   notifyNew: "nimi://notify/new",
   notifyList: "nimi://notify/list",
+  updateProgress: "nimi://update/progress",
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

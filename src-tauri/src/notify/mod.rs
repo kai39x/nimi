@@ -7,6 +7,7 @@
 //! (`ReadDirectoryChangesW`), USB volumes (`WM_DEVICECHANGE` on the overlay), the network
 //! (Network List Manager), the battery on laptops; timers report from `tools::timer`.
 
+pub mod apps;
 pub mod watch;
 
 use std::{
@@ -56,6 +57,7 @@ pub fn spawn(app: &AppHandle) {
     app.manage(sh);
     sync_tray(app);
     watch::spawn(app);
+    apps::spawn(app);
 }
 
 /// The level each kind gets (board 14: هادي «تنزيل خلص، فلاش انوصل» · عادي «المؤقت خلص، رام
@@ -65,9 +67,8 @@ pub fn level_of(kind: NotifyKind, percent: Option<f64>) -> NotifyLevel {
     match kind {
         DiskLow | Reminder | BatteryLow => NotifyLevel::Important,
         CpuHigh if percent.is_some_and(|p| p >= 95.0) => NotifyLevel::Important,
-        CpuHigh | RamHigh | TimerDone | PomodoroBreak | PomodoroWork | PomodoroDone | NetLost => {
-            NotifyLevel::Normal
-        }
+        CpuHigh | RamHigh | TimerDone | PomodoroBreak | PomodoroWork | PomodoroDone | NetLost
+        | App => NotifyLevel::Normal,
         Download | UsbIn | UsbOut | NetBack | PowerIn | PowerOut => NotifyLevel::Calm,
     }
 }
@@ -83,6 +84,7 @@ fn watched(app: &AppHandle, kind: NotifyKind) -> bool {
         UsbIn | UsbOut => w.usb,
         NetLost | NetBack => w.network,
         BatteryLow | PowerIn | PowerOut => w.battery,
+        App => w.apps,
     }
 }
 
@@ -126,7 +128,12 @@ fn changed(app: &AppHandle) {
         if let Some(dir) = p.parent() {
             let _ = fs::create_dir_all(dir);
         }
-        if let Ok(json) = serde_json::to_vec(&list) {
+        // Other apps' messages stay in memory: they are private and gone when NIMI quits.
+        let saved: Vec<&Notification> = list
+            .iter()
+            .filter(|n| n.kind != Some(NotifyKind::App))
+            .collect();
+        if let Ok(json) = serde_json::to_vec(&saved) {
             let tmp = p.with_extension("json.tmp");
             if fs::write(&tmp, json).is_ok() {
                 let _ = fs::rename(&tmp, p);

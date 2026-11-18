@@ -43,6 +43,8 @@ export const appInfo = () => invoke<AppInfo>("app_info");
 /** Asks GitHub for the latest release: only from the About button (NIMI is offline otherwise). */
 export const checkUpdate = () => invoke<UpdateInfo>("check_update");
 export const openUpdatePage = (url: string) => invoke<void>("open_update_page", { url });
+/** «حدّث الحين»: download, verify the signature, install; NIMI closes while the installer runs. */
+export const updateInstall = () => invoke<void>("update_install");
 
 // Settings
 export const getSettings = () => invoke<Settings>("get_settings");
@@ -134,4 +136,6 @@ export const notifyDismiss = (id: number) => invoke<Notification[]>("notify_dism
 export const notifyClear = () => invoke<Notification[]>("notify_clear");
 export const notifyReadAll = () => invoke<Notification[]>("notify_read_all");
 export const openSettingsPage = (page: string) => invoke<void>("open_settings_page", { page });
+/** Whether Windows lets NIMI read other apps' notifications. */
+export const appNotifyAccess = () => invoke<"allowed" | "denied" | "unspecified">("app_notify_access");
 export const devNotify = (kind: NotifyKind) => invoke<void>("dev_notify", { kind });

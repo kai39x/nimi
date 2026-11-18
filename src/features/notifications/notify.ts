@@ -65,6 +65,8 @@ export type Described = {
   sub: string;
   /** Shorter line for the capsule (board 06: «12 GB متبقية · اضغط للتفاصيل»). */
   capsuleSub: string;
+  /** Another app's logo (`data:` URL), drawn instead of the icon. */
+  image?: string;
   action?: { label: string; run: () => void };
 };
 
@@ -198,6 +200,20 @@ export function describe(n: Notification, t: (k: TKey) => string, lang: Lang): D
         capsuleSub: r("notify.batteryLow.sub"),
         action: { label: t("notify.act.battery"), run: () => void openSettingsPage("ms-settings:batterysaver") },
       };
+    case "app": {
+      // Another app's toast: the sender / headline, then the message (or the app's name).
+      const app = n.name ?? "";
+      const title = n.title ?? app;
+      const line = n.body ?? (n.title ? app : "");
+      return {
+        icon: "bell",
+        image: n.icon ?? undefined,
+        title,
+        sub: n.body && app ? `${app} · ${n.body}` : line,
+        capsuleSub: line,
+        action: n.path ? { label: t("notify.act.openApp"), run: () => void launch(n.path!) } : undefined,
+      };
+    }
     case "powerIn":
     case "powerOut":
       return { icon: "battery", title: t(n.kind === "powerIn" ? "notify.powerIn" : "notify.powerOut"), sub: r("notify.power.sub"), capsuleSub: r("notify.power.sub") };

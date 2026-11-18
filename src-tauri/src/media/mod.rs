@@ -11,7 +11,7 @@
 //! result shows up as the next event. If either API is unavailable the feature stays dark and
 //! nothing else is affected.
 
-mod smtc;
+pub(crate) mod smtc;
 mod volume;
 
 use std::sync::{mpsc::Sender, Mutex};

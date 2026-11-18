@@ -3,4 +3,8 @@
 /**
  * «وش يراقب» (board 14): each watched event can be turned off.
  */
-export type NotifyWatch = { disk: boolean, load: boolean, timer: boolean, downloads: boolean, usb: boolean, network: boolean, battery: boolean, };
+export type NotifyWatch = { disk: boolean, load: boolean, timer: boolean, downloads: boolean, usb: boolean, network: boolean, battery: boolean, 
+/**
+ * Show other apps' notifications (off until the user turns it on: tour or settings).
+ */
+apps: boolean, };

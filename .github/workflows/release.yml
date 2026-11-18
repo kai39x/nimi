@@ -104,13 +104,43 @@ jobs:
           Set-Content notes.md -Encoding utf8 -Value "$body`n`n---`n$footer"
           Get-Content notes.md
 
+      # Self-update (docs/SIGNING.md): sign the final installer with the updater key and describe it
+      # in latest.json, which installed copies read when the user presses «حدّث الحين». Runs after
+      # SignPath, so the signature covers the file as published. Without the key secret the release
+      # goes out without these two files (and «حدّث الحين» falls back to the download page).
+      - name: Updater signature and latest.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { "No TAURI_SIGNING_PRIVATE_KEY secret: no self-update files."; exit 0 }
+          $version = "${{ steps.files.outputs.version }}"
+          $setup = "dist-release/NIMI_${version}_x64-setup.exe"
+          npx tauri signer sign $setup
+          if (-not (Test-Path "$setup.sig")) { throw "the updater signature was not written" }
+          $latest = [ordered]@{
+            version   = $version
+            notes     = (Get-Content notes.md -Raw -Encoding utf8)
+            pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = (Get-Content "$setup.sig" -Raw).Trim()
+                url       = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/NIMI_${version}_x64-setup.exe"
+              }
+            }
+          }
+          $latest | ConvertTo-Json -Depth 5 | Set-Content dist-release/latest.json -Encoding utf8NoBOM
+          Get-Content dist-release/latest.json
+
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" dist-release/*.exe `
+          gh release create "${{ github.ref_name }}" (Get-ChildItem dist-release -File).FullName `
             --title "NIMI ${{ steps.files.outputs.version }}" `
             --notes-file notes.md
 

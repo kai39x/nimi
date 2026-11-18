@@ -21,4 +21,12 @@ size: number | null, total: number | null,
 /**
  * 0–100.
  */
-percent: number | null, round: number | null, rounds: number | null, };
+percent: number | null, round: number | null, rounds: number | null, 
+/**
+ * `App` notifications: the sender / headline and the message lines.
+ */
+title: string | null, body: string | null, 
+/**
+ * `App` notifications: the app's logo as a `data:` URL.
+ */
+icon: string | null, };

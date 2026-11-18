@@ -24,6 +24,7 @@ ts-rs = { version = "12.0.1", features = ["serde-compat"] }
 tauri-plugin-autostart = "2"
 windows-core = "0.62"
 windows = { version = "0.62", features = [
+    "ApplicationModel",
     "Data_Pdf",
     "Foundation",
     "Foundation_Collections",
@@ -33,6 +34,8 @@ windows = { version = "0.62", features = [
     "Media_Ocr",
     "Storage",
     "Storage_Streams",
+    "UI_Notifications",
+    "UI_Notifications_Management",
     "Wdk_Graphics_Direct3D",
     "Win32_Foundation",
     "Win32_Graphics_Dwm",
@@ -73,6 +76,8 @@ windows = { version = "0.62", features = [
     "Web_Http_Headers",
 ] }
 tauri-plugin-log = "2"
+# «حدّث الحين»: downloads the release installer, checks its minisign signature, runs it.
+tauri-plugin-updater = "2"
 # WebView2 interfaces Tauri does not wrap (memory target of hidden windows). Same version as Tauri's.
 webview2-com = "0.39"
 lopdf = "0.42"
