@@ -1,6 +1,6 @@
 [package]
 name = "nimi"
-version = "1.1.0"
+version = "1.1.1"
 description = "NIMI — a small desktop companion that lives at the top of your Windows screen"
 authors = ["kai"]
 license = "MIT"

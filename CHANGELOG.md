@@ -3,7 +3,7 @@
 Every release of NIMI. The release workflow copies a version's section into its GitHub Release
 notes, so each version is written here before it is tagged.
 
-## 1.1.1 — unreleased
+## 1.1.1 — 2026-11-18
 
 ### Fixed
 - NIMI could sit off-center, and double-click («back to the middle») put him in the same wrong
