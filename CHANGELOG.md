@@ -3,7 +3,7 @@
 Every release of NIMI. The release workflow copies a version's section into its GitHub Release
 notes, so each version is written here before it is tagged.
 
-## 1.2.0 — unreleased
+## 1.2.0 — 2026-11-18
 
 ### New
 - **Other apps' notifications in NIMI** (WhatsApp, Teams, mail…): turn on «إشعارات البرامج» in
